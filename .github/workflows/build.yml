@@ -1,0 +1,114 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+
+jobs:
+  build:
+    name: Build and Validate
+    runs-on: windows-latest
+    if: ${{ !startsWith(github.event.head_commit.message, 'Release v') }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Create Unity stub assemblies for CI
+        shell: pwsh
+        run: |
+          powershell -ExecutionPolicy Bypass -File scripts/create-unity-stubs.ps1 -LibsPath "src/GoneHomeHeadTracking/libs"
+
+      - name: Restore NuGet packages
+        shell: pwsh
+        run: |
+          $unityPath = "${{ github.workspace }}\src\GoneHomeHeadTracking\libs"
+          dotnet restore src/GoneHomeHeadTracking/GoneHomeHeadTracking.csproj "-p:UnityEnginePath=$unityPath"
+
+      - name: Verify Unity stubs
+        shell: pwsh
+        run: |
+          $unityPath = "${{ github.workspace }}\src\GoneHomeHeadTracking\libs"
+          Write-Host "UnityEnginePath: $unityPath"
+          Write-Host "Checking for stub DLLs..."
+          Get-ChildItem $unityPath -Filter "*.dll" | ForEach-Object { Write-Host "  Found: $($_.Name)" }
+
+          if (-not (Test-Path "$unityPath\UnityEngine.dll")) {
+            Write-Host "::error::UnityEngine.dll not found at $unityPath"
+            exit 1
+          }
+          Write-Host "All stubs verified" -ForegroundColor Green
+
+      - name: Build Debug
+        shell: pwsh
+        run: |
+          Write-Host "Building debug configuration..." -ForegroundColor Cyan
+          $unityPath = "${{ github.workspace }}\src\GoneHomeHeadTracking\libs"
+          Write-Host "UnityEnginePath: $unityPath"
+          dotnet build src/GoneHomeHeadTracking/GoneHomeHeadTracking.csproj --configuration Debug "-p:UnityEnginePath=$unityPath"
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "::error::Debug build failed"
+            exit 1
+          }
+
+          Write-Host "Debug build succeeded" -ForegroundColor Green
+
+      - name: Build Release
+        shell: pwsh
+        run: |
+          Write-Host "Building release configuration..." -ForegroundColor Cyan
+          $unityPath = "${{ github.workspace }}\src\GoneHomeHeadTracking\libs"
+          dotnet build src/GoneHomeHeadTracking/GoneHomeHeadTracking.csproj --configuration Release "-p:UnityEnginePath=$unityPath"
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "::error::Release build failed"
+            exit 1
+          }
+
+          Write-Host "Release build succeeded" -ForegroundColor Green
+
+      - name: Verify build outputs
+        shell: pwsh
+        run: |
+          Write-Host "Verifying build outputs..." -ForegroundColor Cyan
+
+          $requiredFiles = @(
+            "src/GoneHomeHeadTracking/bin/Debug/net48/HeadTracking.dll",
+            "src/GoneHomeHeadTracking/bin/Release/net48/HeadTracking.dll"
+          )
+
+          $allExist = $true
+          foreach ($file in $requiredFiles) {
+            if (Test-Path $file) {
+              $size = (Get-Item $file).Length / 1KB
+              Write-Host "  $file ($([math]::Round($size, 2)) KB)" -ForegroundColor Green
+            } else {
+              Write-Host "  Missing: $file" -ForegroundColor Red
+              $allExist = $false
+            }
+          }
+
+          if (-not $allExist) {
+            Write-Host "::error::Some build outputs are missing"
+            exit 1
+          }
+
+          Write-Host "All build outputs verified" -ForegroundColor Green
