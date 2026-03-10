@@ -33,6 +33,7 @@ The installer automatically finds your game by checking Steam, GOG, and Epic ins
 |-----|--------|
 | **Home** | Recenter (set current head position as neutral) |
 | **End** | Toggle head tracking on/off |
+| **Page Up** | Toggle position tracking (6DOF/3DOF) |
 
 ## Configuration
 
@@ -51,6 +52,7 @@ The mod creates `HeadTracking.cfg` in the game's `GoneHome_Data\Managed` folder 
 |---------|---------|-------------|
 | RecenterKey | Home | Key to recenter head position |
 | ToggleKey | End | Key to toggle tracking on/off |
+| PositionToggleKey | PageUp | Key to toggle position tracking (6DOF/3DOF) |
 
 ### Network
 

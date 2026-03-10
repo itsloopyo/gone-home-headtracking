@@ -106,6 +106,14 @@ namespace HeadTracking
                 ToggleTracking();
             }
 
+            // Check position toggle hotkey
+            if (Input.GetKeyDown(_config.PositionToggleKey))
+            {
+                _cameraController.PositionEnabled = !_cameraController.PositionEnabled;
+                Log($"Position tracking {(_cameraController.PositionEnabled ? "enabled" : "disabled")}");
+            }
+
+
             // Monitor connection state
             bool isConnected = _receiver != null && _receiver.IsReceiving;
             if (isConnected != _wasConnected)

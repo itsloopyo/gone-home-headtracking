@@ -28,8 +28,8 @@ namespace HeadTracking
         // Tracking-only quaternion for aim compensation
         private Quaternion _trackingQuaternion = Quaternion.identity;
 
-        // Output SLERP smoothing state (second smoothing layer for remote connections)
-        private Quaternion _smoothedTrackingQuat = Quaternion.identity;
+        // Output smoothing state (second smoothing layer for remote connections)
+        private float _smoothedYaw, _smoothedPitch, _smoothedRoll;
         private bool _hasSmoothedTracking;
 
         /// <summary>
@@ -66,7 +66,7 @@ namespace HeadTracking
             var rawPose = _receiver.GetLatestPose();
             _processor.RecenterTo(rawPose);
             _interpolator.Reset();
-            _smoothedTrackingQuat = Quaternion.identity;
+            _smoothedYaw = _smoothedPitch = _smoothedRoll = 0f;
             _hasSmoothedTracking = false;
             _positionProcessor?.SetCenter(_receiver.GetLatestPosition());
             _positionInterpolator?.Reset();
@@ -99,30 +99,58 @@ namespace HeadTracking
             float headPitch = processed.Pitch;
             float headRoll = processed.Roll;
 
-            // Build tracking quaternion (Y-X-Z axis ordering)
-            Quaternion trackingQuat = Quaternion.AngleAxis(headYaw, Vector3.up)
-                * Quaternion.AngleAxis(-headPitch, Vector3.right)
-                * Quaternion.AngleAxis(headRoll, Vector3.forward);
-
-            // Output SLERP smoothing: second smoothing layer that eliminates
+            // Output smoothing: second smoothing layer that eliminates
             // snap-to-raw artifacts from PoseInterpolator on remote connections.
-            // For local connections (smoothing=0), t=1 so Slerp returns target unchanged.
+            // For local connections (smoothing=0), t=1 so Lerp returns target unchanged.
             if (_hasSmoothedTracking)
             {
                 float outputSmoothing = isRemote
                     ? Mathf.Clamp01(_smoothingFactor + SmoothingUtils.RemoteConnectionBaseline)
                     : _smoothingFactor;
                 float t = SmoothingUtils.CalculateSmoothingFactor(outputSmoothing, Time.deltaTime);
-                trackingQuat = Quaternion.Slerp(_smoothedTrackingQuat, trackingQuat, t);
+                headYaw = Mathf.Lerp(_smoothedYaw, headYaw, t);
+                headPitch = Mathf.Lerp(_smoothedPitch, headPitch, t);
+                headRoll = Mathf.Lerp(_smoothedRoll, headRoll, t);
             }
-            _smoothedTrackingQuat = trackingQuat;
+            _smoothedYaw = headYaw;
+            _smoothedPitch = headPitch;
+            _smoothedRoll = headRoll;
             _hasSmoothedTracking = true;
 
-            _trackingQuaternion = trackingQuat;
-
-            // Compose: game rotation * tracking (tracking in game-local space)
             Quaternion gameRotation = _targetCamera.transform.rotation;
-            _targetCamera.transform.rotation = gameRotation * trackingQuat;
+
+            // Spherical-coordinate projection (matching DL2): yaw sweeps along
+            // gameRight (always horizontal), pitch elevates along gameUp, so yaw
+            // gives constant horizontal displacement regardless of game camera pitch.
+            // This avoids the quaternion-sandwich problem where world-up yaw appears
+            // as roll when the camera is pitched down.
+            Vector3 gameFwd = gameRotation * Vector3.forward;
+            Vector3 gameUp = gameRotation * Vector3.up;
+            Vector3 gameRight = gameRotation * Vector3.right;
+
+            float yawRad = headYaw * Mathf.Deg2Rad;
+            float pitchRad = headPitch * Mathf.Deg2Rad;
+            float cosY = Mathf.Cos(yawRad);
+            float sinY = Mathf.Sin(yawRad);
+            float cosP = Mathf.Cos(pitchRad);
+            float sinP = Mathf.Sin(pitchRad);
+
+            Vector3 newFwd = (cosP * cosY * gameFwd
+                + cosP * sinY * gameRight
+                + sinP * gameUp).normalized;
+
+            // Re-derive up perpendicular to new forward (Gram-Schmidt against game up)
+            Vector3 newUp = (gameUp - newFwd * Vector3.Dot(newFwd, gameUp)).normalized;
+
+            // Apply roll via Rodrigues rotation around new forward
+            float cosR = Mathf.Cos(headRoll * Mathf.Deg2Rad);
+            float sinR = Mathf.Sin(headRoll * Mathf.Deg2Rad);
+            newUp = (newUp * cosR + Vector3.Cross(newFwd, newUp) * sinR).normalized;
+
+            Quaternion finalRotation = Quaternion.LookRotation(newFwd, newUp);
+            _targetCamera.transform.rotation = finalRotation;
+
+            _trackingQuaternion = Quaternion.Inverse(gameRotation) * finalRotation;
 
             // Position tracking: use tracker 6DOF data via PositionProcessor
             if (PositionEnabled && _positionProcessor != null)
@@ -130,11 +158,11 @@ namespace HeadTracking
                 var rawPos = _receiver.GetLatestPosition();
                 var interpolatedPos = _positionInterpolator.Update(rawPos, Time.deltaTime);
 
-                var headRotQ = new Quat4(trackingQuat.x, trackingQuat.y, trackingQuat.z, trackingQuat.w);
+                var headRotQ = new Quat4(_trackingQuaternion.x, _trackingQuaternion.y, _trackingQuaternion.z, _trackingQuaternion.w);
                 _lastPositionOffset = _positionProcessor.Process(interpolatedPos, headRotQ, isRemote, Time.deltaTime);
 
-                // Apply in camera space: forward means camera forward so leaning
-                // in moves toward whatever you're looking at.
+                // Camera-local position: leaning forward moves toward whatever
+                // you're looking at, so you can inspect objects on surfaces.
                 Vector3 trackingOffset = new Vector3(_lastPositionOffset.X, _lastPositionOffset.Y, _lastPositionOffset.Z);
                 _targetCamera.transform.position += gameRotation * trackingOffset;
             }
@@ -143,7 +171,7 @@ namespace HeadTracking
         public void ResetCamera()
         {
             _trackingQuaternion = Quaternion.identity;
-            _smoothedTrackingQuat = Quaternion.identity;
+            _smoothedYaw = _smoothedPitch = _smoothedRoll = 0f;
             _hasSmoothedTracking = false;
             _processor.ResetSmoothing();
             _interpolator.Reset();

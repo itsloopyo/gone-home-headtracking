@@ -16,7 +16,7 @@ set "MOD_INTERNAL_NAME=GoneHomeHeadTracking"
 set "MOD_VERSION=1.0.0"
 set "MANAGED_SUBFOLDER=GoneHome_Data\Managed"
 set "ASSEMBLY_DLL=Assembly-CSharp.dll"
-set "MOD_CONTROLS=Controls:&echo   Home - Recenter head tracking&echo   End  - Toggle head tracking on/off"
+set "MOD_CONTROLS=Controls:&echo   Home   - Recenter head tracking&echo   End    - Toggle head tracking on/off&echo   PgUp   - Toggle position tracking (6DOF/3DOF)"
 set "GOG_IDS="
 set "SEARCH_DIRS="
 :: --- END CONFIG BLOCK ---

@@ -26,6 +26,7 @@ namespace HeadTracking
         // Hotkeys
         public KeyCode RecenterKey { get; set; } = KeyCode.Home;
         public KeyCode ToggleKey { get; set; } = KeyCode.End;
+        public KeyCode PositionToggleKey { get; set; } = KeyCode.PageUp;
 
         // Position tracking
         public float PositionSensitivityX { get; set; } = 1.0f;
@@ -111,6 +112,16 @@ namespace HeadTracking
                                 config.ToggleKey = (KeyCode)Enum.Parse(typeof(KeyCode), value, true);
                             }
                             break;
+                        case "positiontogglekey":
+                            if (!Enum.IsDefined(typeof(KeyCode), value))
+                            {
+                                log?.Invoke($"Invalid PositionToggleKey value '{value}' - using default {config.PositionToggleKey}");
+                            }
+                            else
+                            {
+                                config.PositionToggleKey = (KeyCode)Enum.Parse(typeof(KeyCode), value, true);
+                            }
+                            break;
                         case "positionsensitivityx":
                             if (float.TryParse(value, out float posX))
                                 config.PositionSensitivityX = posX;
@@ -171,6 +182,7 @@ namespace HeadTracking
                     "# See https://docs.unity3d.com/ScriptReference/KeyCode.html for key names\n" +
                     "RecenterKey = Home\n" +
                     "ToggleKey = End\n" +
+                    "PositionToggleKey = PageUp\n" +
                     "\n" +
                     "# --- Sensitivity ---\n" +
                     "YawSensitivity = 1.0\n" +
