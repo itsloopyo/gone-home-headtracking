@@ -21,6 +21,13 @@ namespace HeadTracking
         private readonly PositionProcessor _positionProcessor;
         private readonly PositionInterpolator _positionInterpolator;
 
+        /// <summary>
+        /// Minimum output smoothing to eliminate snap-to-raw artifacts from
+        /// PoseInterpolator/PositionInterpolator when render rate exceeds tracker
+        /// sample rate (e.g. 240 Hz display with 60 Hz tracking).
+        /// </summary>
+        private const float OutputSmoothingBaseline = 0.05f;
+
         private Camera _targetCamera;
         private Vec3 _lastPositionOffset;
         private bool _hasCentered;
@@ -28,12 +35,14 @@ namespace HeadTracking
         // Tracking-only quaternion for aim compensation
         private Quaternion _trackingQuaternion = Quaternion.identity;
 
-        // Output smoothing state (second smoothing layer for remote connections)
+        // Output smoothing state (eliminates snap-to-raw artifacts from interpolators)
         private float _smoothedYaw, _smoothedPitch, _smoothedRoll;
         private bool _hasSmoothedTracking;
+        private float _smoothedPosX, _smoothedPosY, _smoothedPosZ;
+        private bool _hasSmoothedPosition;
 
         /// <summary>
-        /// Gets the tracking-only quaternion (smoothed for remote connections).
+        /// Gets the tracking-only quaternion (smoothed).
         /// Used by AimController to compute the aim offset.
         /// </summary>
         public Quaternion TrackingQuaternion => _trackingQuaternion;
@@ -68,6 +77,8 @@ namespace HeadTracking
             _interpolator.Reset();
             _smoothedYaw = _smoothedPitch = _smoothedRoll = 0f;
             _hasSmoothedTracking = false;
+            _smoothedPosX = _smoothedPosY = _smoothedPosZ = 0f;
+            _hasSmoothedPosition = false;
             _positionProcessor?.SetCenter(_receiver.GetLatestPosition());
             _positionInterpolator?.Reset();
             _lastPositionOffset = Vec3.Zero;
@@ -82,9 +93,11 @@ namespace HeadTracking
             if (camera == null) return;
             _targetCamera = camera;
 
-            // Auto-recenter on first valid frame so the user's startup head position is neutral
+            // Auto-recenter once real tracker data arrives so the user's startup position is neutral.
+            // Wait for fresh data — on the very first frame the receiver may not have packets yet.
             if (!_hasCentered)
             {
+                if (!_receiver.IsDataFresh()) return;
                 _hasCentered = true;
                 Recenter();
             }
@@ -99,14 +112,16 @@ namespace HeadTracking
             float headPitch = processed.Pitch;
             float headRoll = processed.Roll;
 
-            // Output smoothing: second smoothing layer that eliminates
-            // snap-to-raw artifacts from PoseInterpolator on remote connections.
-            // For local connections (smoothing=0), t=1 so Lerp returns target unchanged.
+            // Output smoothing: eliminates snap-to-raw artifacts from PoseInterpolator
+            // when render rate exceeds tracker sample rate.
+            // Baseline ensures smooth output for all connections; remote gets extra
+            // smoothing to compensate for network jitter.
+            float outputSmoothing = Mathf.Max(_smoothingFactor, OutputSmoothingBaseline);
+            if (isRemote)
+                outputSmoothing = Mathf.Clamp01(outputSmoothing + SmoothingUtils.RemoteConnectionBaseline);
+
             if (_hasSmoothedTracking)
             {
-                float outputSmoothing = isRemote
-                    ? Mathf.Clamp01(_smoothingFactor + SmoothingUtils.RemoteConnectionBaseline)
-                    : _smoothingFactor;
                 float t = SmoothingUtils.CalculateSmoothingFactor(outputSmoothing, Time.deltaTime);
                 headYaw = Mathf.Lerp(_smoothedYaw, headYaw, t);
                 headPitch = Mathf.Lerp(_smoothedPitch, headPitch, t);
@@ -161,6 +176,20 @@ namespace HeadTracking
                 var headRotQ = new Quat4(_trackingQuaternion.x, _trackingQuaternion.y, _trackingQuaternion.z, _trackingQuaternion.w);
                 _lastPositionOffset = _positionProcessor.Process(interpolatedPos, headRotQ, isRemote, Time.deltaTime);
 
+                // Output smoothing for position (mirrors rotation output smoothing)
+                if (_hasSmoothedPosition)
+                {
+                    float tp = SmoothingUtils.CalculateSmoothingFactor(outputSmoothing, Time.deltaTime);
+                    _lastPositionOffset = new Vec3(
+                        Mathf.Lerp(_smoothedPosX, _lastPositionOffset.X, tp),
+                        Mathf.Lerp(_smoothedPosY, _lastPositionOffset.Y, tp),
+                        Mathf.Lerp(_smoothedPosZ, _lastPositionOffset.Z, tp));
+                }
+                _smoothedPosX = _lastPositionOffset.X;
+                _smoothedPosY = _lastPositionOffset.Y;
+                _smoothedPosZ = _lastPositionOffset.Z;
+                _hasSmoothedPosition = true;
+
                 // Camera-local position: leaning forward moves toward whatever
                 // you're looking at, so you can inspect objects on surfaces.
                 Vector3 trackingOffset = new Vector3(_lastPositionOffset.X, _lastPositionOffset.Y, _lastPositionOffset.Z);
@@ -173,6 +202,8 @@ namespace HeadTracking
             _trackingQuaternion = Quaternion.identity;
             _smoothedYaw = _smoothedPitch = _smoothedRoll = 0f;
             _hasSmoothedTracking = false;
+            _smoothedPosX = _smoothedPosY = _smoothedPosZ = 0f;
+            _hasSmoothedPosition = false;
             _processor.ResetSmoothing();
             _interpolator.Reset();
             _positionProcessor?.Reset();
