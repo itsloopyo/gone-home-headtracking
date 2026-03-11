@@ -70,13 +70,13 @@ namespace HeadTracking
                 Settings = new PositionSettings(
                     _config.PositionSensitivityX, _config.PositionSensitivityY, _config.PositionSensitivityZ,
                     float.MaxValue, float.MaxValue, float.MaxValue,
-                    0.15f,
+                    0f,
                     invertX: _config.InvertPositionX, invertY: _config.InvertPositionY, invertZ: _config.InvertPositionZ
                 ),
                 NeckModelSettings = NeckModelSettings.Disabled
             };
             var positionInterpolator = new PositionInterpolator();
-            _cameraController = new CameraController(_receiver, processor, interpolator, _config.Smoothing, positionProcessor, positionInterpolator);
+            _cameraController = new CameraController(_receiver, processor, interpolator, positionProcessor, positionInterpolator);
 
             // Aim system will be initialized lazily in Update() to avoid early init issues
             _aimSystemInitialized = false;
