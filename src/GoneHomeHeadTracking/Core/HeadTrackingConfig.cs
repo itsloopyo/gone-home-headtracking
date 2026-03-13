@@ -21,7 +21,7 @@ namespace HeadTracking
         public float RollSensitivity { get; set; } = 1.0f;
 
         // Smoothing
-        public float Smoothing { get; set; } = 0.0f;
+        public float Smoothing { get; set; } = 0.15f;
 
         // Hotkeys
         public KeyCode RecenterKey { get; set; } = KeyCode.Home;
@@ -190,8 +190,8 @@ namespace HeadTracking
                     "RollSensitivity = 1.0\n" +
                     "\n" +
                     "# --- Smoothing ---\n" +
-                    "# 0.0 = no smoothing, 1.0 = maximum. Remote connections enforce a minimum of 0.15.\n" +
-                    "Smoothing = 0.0\n" +
+                    "# 0.0 = no smoothing, 1.0 = maximum.\n" +
+                    "Smoothing = 0.15\n" +
                     "\n" +
                     "# --- Position Tracking ---\n" +
                     "PositionSensitivityX = 1.0\n" +
