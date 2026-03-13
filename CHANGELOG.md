@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.4] - 2026-03-13
+
+### Other
+
+- Set default smoothing to 0.15, simplify config comment
+
 ## [1.0.3] - 2026-03-13
 
 ### Other
