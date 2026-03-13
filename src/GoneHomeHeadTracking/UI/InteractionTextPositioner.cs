@@ -103,8 +103,9 @@ namespace HeadTracking
 
                 _initialized = true;
             }
-            catch
+            catch (System.Exception ex)
             {
+                ModLoader.Log($"[InteractionTextPositioner] FindUIElements error: {ex.Message}");
                 _elementsSearched = false; // Retry on error
             }
         }

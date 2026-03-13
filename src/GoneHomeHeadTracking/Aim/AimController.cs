@@ -37,9 +37,9 @@ namespace HeadTracking
             // Camera may legitimately be null during Unity scene transitions - this is expected
             if (camera == null) return;
 
-            // Use shared cameraunlock-core utility for WorldToScreenPoint projection
-            Quaternion trackingQuat = _cameraController.TrackingQuaternion;
-            _screenOffset = CanvasCompensation.CalculateAimScreenOffsetFromTracking(camera, trackingQuat);
+            // Project the un-tracked aim direction through the head-tracked view matrix.
+            // camera.transform is unmodified (view matrix only), so transform.forward IS the aim direction.
+            _screenOffset = CanvasCompensation.CalculateAimScreenOffset(camera, camera.transform.forward);
         }
     }
 }

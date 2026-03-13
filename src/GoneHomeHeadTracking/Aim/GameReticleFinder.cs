@@ -80,8 +80,9 @@ namespace HeadTracking
                     }
                 }
             }
-            catch
+            catch (System.Exception ex)
             {
+                ModLoader.Log($"[GameReticleFinder] FindHUDInstance error: {ex.Message}");
             }
         }
 

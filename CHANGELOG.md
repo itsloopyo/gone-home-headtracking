@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.3] - 2026-03-13
+
+### Other
+
+- Switch to view-matrix-only head tracking, remove transform save/restore
+
 ## [1.0.2] - 2026-03-13
 
 ### Other

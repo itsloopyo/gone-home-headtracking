@@ -128,6 +128,9 @@ namespace UnityEngine {
         public static Matrix4x4 Translate(Vector3 v) => default;
         public static Matrix4x4 Scale(Vector3 v) => default;
         public static Matrix4x4 operator *(Matrix4x4 lhs, Matrix4x4 rhs) => default;
+        public Vector3 MultiplyVector(Vector3 vector) => default;
+        public Vector3 MultiplyPoint(Vector3 point) => default;
+        public Vector3 MultiplyPoint3x4(Vector3 point) => default;
         public Matrix4x4 inverse => default;
         public Quaternion rotation => default;
         public Vector3 lossyScale => default;

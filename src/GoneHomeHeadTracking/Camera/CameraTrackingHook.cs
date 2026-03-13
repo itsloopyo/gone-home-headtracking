@@ -7,14 +7,10 @@ namespace HeadTracking
     /// <summary>
     /// Helper component attached to the main camera to apply head tracking at the right time.
     ///
-    /// CRITICAL FOR LOOK/AIM DECOUPLING:
-    /// We apply tracking ONLY during rendering (OnPreCull) and restore the original rotation
-    /// after rendering (OnPostRender). This means:
-    /// - Game logic (FrobManager, interactions) sees the un-tracked camera direction = AIM
-    /// - Rendering sees the tracked camera direction = LOOK (where head is pointing)
-    ///
-    /// This decouples look from aim - you can look around with head tracking while
-    /// interactions/aiming remain at screen center.
+    /// LOOK/AIM DECOUPLING via view matrix:
+    /// Head tracking modifies only camera.worldToCameraMatrix — the camera transform is never touched.
+    /// - Game logic (FrobManager, interactions) sees the un-tracked transform = AIM
+    /// - Rendering sees the modified view matrix = LOOK (where head is pointing)
     /// </summary>
     public sealed class CameraTrackingHook : MonoBehaviour
     {
@@ -26,13 +22,6 @@ namespace HeadTracking
         private Camera _camera;
         private bool _isEnabled;
         private bool _wasTracking;
-
-        // Rotation/position restoration for look/aim decoupling
-        // We store the game's rotation and position before tracking, apply tracking for render,
-        // then restore after render so game logic sees un-tracked direction
-        private Quaternion _preTrackingRotation;
-        private Vector3 _preTrackingPosition;
-        private bool _trackingAppliedThisFrame;
 
         // Gameplay detection - only apply tracking when vp_FPSCamera is active
         private static bool _staticIsInGameplay;
@@ -137,16 +126,14 @@ namespace HeadTracking
         /// <summary>
         /// Called just before this camera renders.
         ///
-        /// LOOK/AIM DECOUPLING:
-        /// 1. Store the current (game-controlled) rotation - this is the AIM direction
-        /// 2. Apply head tracking on top - this is the LOOK direction
-        /// 3. Camera renders with LOOK direction
-        /// 4. OnPostRender restores AIM direction for next frame's game logic
+        /// LOOK/AIM DECOUPLING via view matrix:
+        /// Head tracking modifies only worldToCameraMatrix — the camera transform stays unchanged.
+        /// Game logic (FrobManager, raycasts) sees the un-tracked transform = AIM direction.
+        /// Rendering sees the modified view matrix = LOOK direction (where head is pointing).
+        /// No OnPostRender restoration needed.
         /// </summary>
         private void OnPreCull()
         {
-            _trackingAppliedThisFrame = false;
-
             try
             {
                 // Check if we're in gameplay
@@ -165,15 +152,7 @@ namespace HeadTracking
                     return;
                 }
 
-                // CRITICAL: Store the pre-tracking rotation and position (this is the AIM direction)
-                // The game's vp_FPSCamera has set this in LateUpdate - it represents
-                // where the player is aiming based on mouse/controller input
-                _preTrackingRotation = _camera.transform.rotation;
-                _preTrackingPosition = _camera.transform.position;
-                _trackingAppliedThisFrame = true;
-
-                // Apply head tracking to camera - this is the LOOK direction
-                // After this, camera.forward = where player's head is looking
+                // Apply head tracking via view matrix — transform stays untouched
                 _cameraController.ApplyTracking(_camera);
 
                 // Update aim controller with tracking info
@@ -197,33 +176,5 @@ namespace HeadTracking
             }
         }
 
-        /// <summary>
-        /// Called after this camera has finished rendering.
-        ///
-        /// CRITICAL FOR LOOK/AIM DECOUPLING:
-        /// Restore the pre-tracking rotation so that game logic (FrobManager, etc.)
-        /// sees the AIM direction (un-tracked) during the next frame's Update phase.
-        ///
-        /// Without this, FrobManager would raycast from the LOOK direction,
-        /// meaning interactions would follow where you look instead of screen center.
-        /// </summary>
-        private void OnPostRender()
-        {
-            if (!_trackingAppliedThisFrame) return;
-
-            try
-            {
-                if (_camera != null)
-                {
-                    // Restore the AIM direction and position for game logic
-                    _camera.transform.rotation = _preTrackingRotation;
-                    _camera.transform.position = _preTrackingPosition;
-                }
-            }
-            catch (Exception ex)
-            {
-                ModLoader.Log($"[CameraTrackingHook] OnPostRender error: {ex.Message}");
-            }
-        }
     }
 }

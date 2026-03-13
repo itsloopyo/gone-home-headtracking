@@ -93,13 +93,12 @@ namespace HeadTracking
             float headPitch = processed.Pitch;
             float headRoll = processed.Roll;
 
-            Quaternion gameRotation = _targetCamera.transform.rotation;
+            // Apply rotation via view matrix — never touch camera.transform.
+            // Pitch negated to match ComposeAdditive convention (positive pitch = look up).
+            var neckPivot = new Vector3(0f, 0.10f, 0.08f);
+            ViewMatrixModifier.ApplyHeadRotationDecomposed(camera, headYaw, -headPitch, headRoll, neckPivot);
 
-            Quaternion finalRotation = CameraRotationComposer.ComposeAdditive(
-                gameRotation, headYaw, headPitch, headRoll);
-            _targetCamera.transform.rotation = finalRotation;
-
-            _trackingQuaternion = Quaternion.Inverse(gameRotation) * finalRotation;
+            _trackingQuaternion = CameraRotationComposer.GetTrackingOnlyRotation(headYaw, headPitch, headRoll);
 
             // Position tracking: use tracker 6DOF data via PositionProcessor
             if (PositionEnabled && _positionProcessor != null)
@@ -110,9 +109,17 @@ namespace HeadTracking
                 var headRotQ = new Quat4(_trackingQuaternion.x, _trackingQuaternion.y, _trackingQuaternion.z, _trackingQuaternion.w);
                 _lastPositionOffset = _positionProcessor.Process(interpolatedPos, headRotQ, isRemote, Time.deltaTime);
 
+                // Apply position offset via view matrix translation.
                 // Camera-local position: leaning forward moves toward whatever
                 // you're looking at, so you can inspect objects on surfaces.
-                _targetCamera.transform.position += PositionApplicator.ToCameraLocalWorld(_lastPositionOffset, gameRotation);
+                Quaternion gameRotation = camera.transform.rotation;
+                Vector3 worldOffset = PositionApplicator.ToCameraLocalWorld(_lastPositionOffset, gameRotation);
+                Matrix4x4 vm = camera.worldToCameraMatrix;
+                Vector3 viewSpaceOffset = vm.MultiplyVector(worldOffset);
+                vm.m03 -= viewSpaceOffset.x;
+                vm.m13 -= viewSpaceOffset.y;
+                vm.m23 -= viewSpaceOffset.z;
+                camera.worldToCameraMatrix = vm;
             }
         }
 
