@@ -1,6 +1,7 @@
 using CameraUnlock.Core.Data;
 using CameraUnlock.Core.Processing;
 using CameraUnlock.Core.Protocol;
+using CameraUnlock.Core.Unity.Tracking;
 using UnityEngine;
 
 namespace HeadTracking
@@ -89,47 +90,13 @@ namespace HeadTracking
             var processed = _processor.Process(interpolated, isRemote, Time.deltaTime);
 
             float headYaw = processed.Yaw;
-            float headPitch = -processed.Pitch;
+            float headPitch = processed.Pitch;
             float headRoll = processed.Roll;
 
             Quaternion gameRotation = _targetCamera.transform.rotation;
 
-            // Horizon-locked yaw (matching DL2 rotation_math.h): yaw rotates
-            // around world Y, pitch around camera right. Pure yaw preserves
-            // the vertical angle regardless of game camera pitch, and horizontal
-            // displacement naturally scales with cos(gamePitch).
-            Vector3 newFwd = gameRotation * Vector3.forward;
-            Vector3 newUp = gameRotation * Vector3.up;
-
-            // Yaw: rotate fwd and up around world Y axis (horizon-locked)
-            float yawRad = headYaw * Mathf.Deg2Rad;
-            if (Mathf.Abs(yawRad) >= 0.001f)
-            {
-                float cosY = Mathf.Cos(yawRad);
-                float sinY = Mathf.Sin(yawRad);
-                newFwd = RodriguesRotate(newFwd, Vector3.up, cosY, sinY);
-                newUp = RodriguesRotate(newUp, Vector3.up, cosY, sinY);
-            }
-
-            // Pitch: rotate fwd around camera's right vector
-            float pitchRad = headPitch * Mathf.Deg2Rad;
-            if (Mathf.Abs(pitchRad) >= 0.001f)
-            {
-                Vector3 right = Vector3.Cross(newUp, newFwd).normalized;
-                float cosP = Mathf.Cos(pitchRad);
-                float sinP = Mathf.Sin(pitchRad);
-                newFwd = RodriguesRotate(newFwd, right, cosP, sinP);
-            }
-
-            // Re-derive up perpendicular to new forward (Gram-Schmidt against yaw-rotated up)
-            newUp = (newUp - newFwd * Vector3.Dot(newFwd, newUp)).normalized;
-
-            // Apply roll via Rodrigues rotation around new forward
-            float cosR = Mathf.Cos(headRoll * Mathf.Deg2Rad);
-            float sinR = Mathf.Sin(headRoll * Mathf.Deg2Rad);
-            newUp = (newUp * cosR + Vector3.Cross(newFwd, newUp) * sinR).normalized;
-
-            Quaternion finalRotation = Quaternion.LookRotation(newFwd, newUp);
+            Quaternion finalRotation = CameraRotationComposer.ComposeAdditive(
+                gameRotation, headYaw, headPitch, headRoll);
             _targetCamera.transform.rotation = finalRotation;
 
             _trackingQuaternion = Quaternion.Inverse(gameRotation) * finalRotation;
@@ -145,21 +112,18 @@ namespace HeadTracking
 
                 // Camera-local position: leaning forward moves toward whatever
                 // you're looking at, so you can inspect objects on surfaces.
-                Vector3 trackingOffset = new Vector3(_lastPositionOffset.X, _lastPositionOffset.Y, _lastPositionOffset.Z);
-                _targetCamera.transform.position += gameRotation * trackingOffset;
+                _targetCamera.transform.position += PositionApplicator.ToCameraLocalWorld(_lastPositionOffset, gameRotation);
             }
         }
 
         /// <summary>
-        /// Rodrigues rotation: rotate v around a unit axis by angle with precomputed cos/sin.
-        /// v' = v*cos + (axis x v)*sin + axis*(axis . v)*(1 - cos)
+        /// Re-arms the auto-recenter so the next ApplyTracking call with fresh data
+        /// will recenter automatically. Called when tracking is lost (disconnect,
+        /// toggle off, leaving gameplay) so reconnection feels seamless.
         /// </summary>
-        private static Vector3 RodriguesRotate(Vector3 v, Vector3 axis, float cos, float sin)
+        public void NotifyTrackingLost()
         {
-            float dot = Vector3.Dot(axis, v);
-            Vector3 cross = Vector3.Cross(axis, v);
-            float omc = 1f - cos;
-            return v * cos + cross * sin + axis * (dot * omc);
+            _hasCentered = false;
         }
 
         public void ResetCamera()

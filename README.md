@@ -42,14 +42,18 @@ The installer automatically finds your game by checking Steam, GOG, and Epic ins
 
 ### Phone App Setup
 
-This mod includes built-in smoothing to handle network jitter, so you can send directly from your phone to the mod on port 4242 without needing OpenTrack on PC.
+This mod includes built-in smoothing to handle network jitter, so if your tracking app already provides a filtered signal, you can send directly from your phone to the mod on port 4242 without needing OpenTrack on PC.
 
 1. Install an OpenTrack-compatible head tracking app from your phone's app store
 2. Configure your phone app to send to your PC's IP address on port 4242 (run `ipconfig` to find it, e.g. `192.168.1.100`)
 3. Set the protocol to OpenTrack/UDP
 4. Start tracking
 
-**With OpenTrack (optional):** If you want curve mapping or visual preview, route through OpenTrack by setting its Input to "UDP over network" on a different port (e.g. 5252) and Output to `127.0.0.1:4242`. Point your phone at the OpenTrack input port instead.
+**With OpenTrack (optional):** If you experience jerky motion, want curve mapping, or want a visual preview, route through OpenTrack instead. The mod already listens on port 4242, so OpenTrack's input must use a different port:
+1. In OpenTrack, set Input to **UDP over network** on port **5252** (or any port other than 4242)
+2. Set Output to **UDP over network** at `127.0.0.1:4242`
+3. In your phone app, send to your PC's IP on port **5252** (matching OpenTrack's input port)
+4. Make sure port 5252 is open in your PC's firewall for incoming UDP traffic
 
 ## Controls
 

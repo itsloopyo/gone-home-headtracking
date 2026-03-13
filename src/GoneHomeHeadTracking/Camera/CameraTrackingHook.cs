@@ -25,6 +25,7 @@ namespace HeadTracking
         private OpenTrackReceiver _receiver;
         private Camera _camera;
         private bool _isEnabled;
+        private bool _wasTracking;
 
         // Rotation/position restoration for look/aim decoupling
         // We store the game's rotation and position before tracking, apply tracking for render,
@@ -151,12 +152,18 @@ namespace HeadTracking
                 // Check if we're in gameplay
                 _isInGameplay = CheckInGameplay();
                 _staticIsInGameplay = _isInGameplay;
-                if (!_isInGameplay) return;
 
-                if (!_isEnabled || NullHelper.IsNull(_cameraController) || NullHelper.IsNull(_receiver) || !_receiver.IsReceiving)
+                bool canTrack = _isInGameplay && _isEnabled &&
+                                NullHelper.NotNull(_cameraController) && NullHelper.NotNull(_receiver) &&
+                                _receiver.IsReceiving && _camera != null;
+
+                if (!canTrack)
+                {
+                    if (_wasTracking && NullHelper.NotNull(_cameraController))
+                        _cameraController.NotifyTrackingLost();
+                    _wasTracking = false;
                     return;
-
-                if (_camera == null) return;
+                }
 
                 // CRITICAL: Store the pre-tracking rotation and position (this is the AIM direction)
                 // The game's vp_FPSCamera has set this in LateUpdate - it represents
@@ -181,6 +188,8 @@ namespace HeadTracking
 
                 // Keep trying to hide game reticle until we find it
                 _gameReticleFinder?.TryHideGameReticle();
+
+                _wasTracking = true;
             }
             catch (Exception ex)
             {

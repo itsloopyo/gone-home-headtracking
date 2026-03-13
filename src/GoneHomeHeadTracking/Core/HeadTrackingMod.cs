@@ -69,7 +69,7 @@ namespace HeadTracking
                 TrackerPivotForward = 0.01f,
                 Settings = new PositionSettings(
                     _config.PositionSensitivityX, _config.PositionSensitivityY, _config.PositionSensitivityZ,
-                    float.MaxValue, float.MaxValue, float.MaxValue,
+                    float.MaxValue, float.MaxValue, float.MaxValue, float.MaxValue,
                     0f,
                     invertX: _config.InvertPositionX, invertY: _config.InvertPositionY, invertZ: _config.InvertPositionZ
                 ),
