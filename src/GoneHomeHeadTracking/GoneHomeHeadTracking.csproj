@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <OutputType>Library</OutputType>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <AssemblyName>HeadTracking</AssemblyName>
     <RootNamespace>HeadTracking</RootNamespace>
     <LangVersion>8.0</LangVersion>

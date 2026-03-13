@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2] - 2026-03-13
+
+### Other
+
+- Use horizon-locked yaw via Rodrigues rotation, remove output smoothing
+- Use shared rotation/position helpers, add auto-recenter on tracking loss
+
 ## [1.0.1] - 2026-03-10
 
 ### Other
