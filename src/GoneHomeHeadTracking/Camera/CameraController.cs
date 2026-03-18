@@ -85,9 +85,17 @@ namespace HeadTracking
 
             // Get raw tracking data, interpolate between samples, then process
             var rawPose = _receiver.GetLatestPose();
-            var interpolated = _interpolator.Update(rawPose, Time.deltaTime);
             bool isRemote = _receiver.IsRemoteConnection;
-            var processed = _processor.Process(interpolated, isRemote, Time.deltaTime);
+
+            // Always update interpolator to maintain velocity state
+            var interpolated = _interpolator.Update(rawPose, Time.deltaTime);
+
+            // Use interpolated pose only when smoothing absorbs prediction corrections;
+            // at smoothing=0 (local), interpolation creates visible correction stutters
+            if (isRemote || _processor.SmoothingFactor >= 0.001f)
+                rawPose = interpolated;
+
+            var processed = _processor.Process(rawPose, isRemote, Time.deltaTime);
 
             float headYaw = processed.Yaw;
             float headPitch = processed.Pitch;
