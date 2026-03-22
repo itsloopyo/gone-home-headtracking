@@ -103,8 +103,7 @@ namespace HeadTracking
 
             // Apply rotation via view matrix — never touch camera.transform.
             // Pitch negated to match ComposeAdditive convention (positive pitch = look up).
-            var neckPivot = new Vector3(0f, 0.10f, 0.08f);
-            ViewMatrixModifier.ApplyHeadRotationDecomposed(camera, headYaw, -headPitch, headRoll, neckPivot);
+            ViewMatrixModifier.ApplyHeadRotationDecomposed(camera, headYaw, -headPitch, headRoll);
 
             _trackingQuaternion = CameraRotationComposer.GetTrackingOnlyRotation(headYaw, headPitch, headRoll);
 

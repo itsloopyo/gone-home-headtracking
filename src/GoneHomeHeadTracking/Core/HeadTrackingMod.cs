@@ -72,8 +72,7 @@ namespace HeadTracking
                     float.MaxValue, float.MaxValue, float.MaxValue, float.MaxValue,
                     0f,
                     invertX: _config.InvertPositionX, invertY: _config.InvertPositionY, invertZ: _config.InvertPositionZ
-                ),
-                NeckModelSettings = NeckModelSettings.Disabled
+                )
             };
             var positionInterpolator = new PositionInterpolator();
             _cameraController = new CameraController(_receiver, processor, interpolator, positionProcessor, positionInterpolator);
