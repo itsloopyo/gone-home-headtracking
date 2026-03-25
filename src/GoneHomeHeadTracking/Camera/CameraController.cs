@@ -85,17 +85,16 @@ namespace HeadTracking
 
             // Get raw tracking data, interpolate between samples, then process
             var rawPose = _receiver.GetLatestPose();
-            bool isRemote = _receiver.IsRemoteConnection;
 
             // Always update interpolator to maintain velocity state
             var interpolated = _interpolator.Update(rawPose, Time.deltaTime);
 
             // Use interpolated pose only when smoothing absorbs prediction corrections;
-            // at smoothing=0 (local), interpolation creates visible correction stutters
-            if (isRemote || _processor.SmoothingFactor >= 0.001f)
+            // at smoothing=0, interpolation creates visible correction stutters
+            if (_processor.SmoothingFactor >= 0.001f)
                 rawPose = interpolated;
 
-            var processed = _processor.Process(rawPose, isRemote, Time.deltaTime);
+            var processed = _processor.Process(rawPose, Time.deltaTime);
 
             float headYaw = processed.Yaw;
             float headPitch = processed.Pitch;
@@ -114,7 +113,7 @@ namespace HeadTracking
                 var interpolatedPos = _positionInterpolator.Update(rawPos, Time.deltaTime);
 
                 var headRotQ = new Quat4(_trackingQuaternion.x, _trackingQuaternion.y, _trackingQuaternion.z, _trackingQuaternion.w);
-                _lastPositionOffset = _positionProcessor.Process(interpolatedPos, headRotQ, isRemote, Time.deltaTime);
+                _lastPositionOffset = _positionProcessor.Process(interpolatedPos, headRotQ, Time.deltaTime);
 
                 // Apply position offset via view matrix translation.
                 // Camera-local position: leaning forward moves toward whatever
