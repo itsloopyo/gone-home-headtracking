@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.5] - 2026-03-28
+
+### Other
+
+- Skip pose interpolation at zero smoothing to avoid correction stutters
+- Remove neck model parameters after core API simplification
+- Use camera-relative rotation and fix reticle jitter
+
 ## [1.0.4] - 2026-03-13
 
 ### Other
