@@ -6,7 +6,7 @@ channels = ["conda-forge"]
 platforms = ["win-64"]
 
 [tasks]
-sync = "git submodule update --remote shared"
+sync = "git submodule update --remote cameraunlock-core"
 setup-libs = "powershell -ExecutionPolicy Bypass -File scripts/setup-libs.ps1"
 restore = { cmd = "dotnet restore src/GoneHomeHeadTracking/GoneHomeHeadTracking.csproj", depends-on = ["setup-libs"] }
 build = { cmd = "dotnet build src/GoneHomeHeadTracking/GoneHomeHeadTracking.csproj -c Release", depends-on = ["restore"] }

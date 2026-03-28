@@ -50,6 +50,7 @@ namespace HeadTracking
 
             // Initialize components
             _receiver = new OpenTrackReceiver();
+            _receiver.Log = Log;
             _receiver.Start(_config.UdpPort);
 
             var processor = new TrackingProcessor

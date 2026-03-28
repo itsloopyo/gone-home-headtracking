@@ -101,8 +101,8 @@ namespace HeadTracking
             float headRoll = processed.Roll;
 
             // Apply rotation via view matrix — never touch camera.transform.
-            // Pitch negated to match ComposeAdditive convention (positive pitch = look up).
-            ViewMatrixModifier.ApplyHeadRotationDecomposed(camera, headYaw, -headPitch, headRoll);
+            // Pitch negated to match Euler convention (positive pitch = look up).
+            ViewMatrixModifier.ApplyHeadRotation(camera, headYaw, -headPitch, headRoll);
 
             _trackingQuaternion = CameraRotationComposer.GetTrackingOnlyRotation(headYaw, headPitch, headRoll);
 

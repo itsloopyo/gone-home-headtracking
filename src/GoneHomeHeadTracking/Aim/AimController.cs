@@ -10,10 +10,10 @@ namespace HeadTracking
     /// </summary>
     public sealed class AimController
     {
-        private const float MaxRaycastDistance = 1000f;
-        private const float MinRaycastDistance = 0.5f;
-        private const float DistanceSmoothingRate = 15f;
-        private float _lastHitDistance = 100f;
+        // Fixed projection distance — Gone Home is a walking sim with no weapons,
+        // so we don't need to track per-frame hitpoints. A fixed distance gives
+        // a stable reticle that doesn't hop between colliders.
+        private const float ProjectionDistance = 10f;
 
         private readonly CameraController _cameraController;
 
@@ -45,15 +45,7 @@ namespace HeadTracking
             // camera.transform is unmodified (view matrix only), so transform.forward IS the aim direction.
             Vector3 aimDir = camera.transform.forward;
 
-            RaycastHit hit;
-            if (Physics.Raycast(camera.transform.position, aimDir, out hit, MaxRaycastDistance)
-                && hit.distance >= MinRaycastDistance)
-            {
-                float t = 1f - Mathf.Exp(-DistanceSmoothingRate * Time.deltaTime);
-                _lastHitDistance = Mathf.Lerp(_lastHitDistance, hit.distance, t);
-            }
-
-            _screenOffset = CanvasCompensation.CalculateAimScreenOffset(camera, aimDir, _lastHitDistance, 1f);
+            _screenOffset = CanvasCompensation.CalculateAimScreenOffset(camera, aimDir, ProjectionDistance, 1f);
         }
     }
 }
