@@ -3,4 +3,15 @@
   <PropertyGroup Condition="'$(UnityEnginePath)' == ''">
     <UnityEnginePath>$(MSBuildThisFileDirectory)src\GoneHomeHeadTracking\libs</UnityEnginePath>
   </PropertyGroup>
+
+  <!-- Serialize project builds. CameraUnlock.Core is pulled in via two
+       paths (direct reference from GoneHomeHeadTracking AND transitively
+       through CameraUnlock.Core.Unity), and MSBuild's parallel node
+       scheduler will happily try to rebuild it in both paths at once and
+       collide on the obj/Release/net48/CameraUnlock.Core.dll output.
+       Sequential builds are trivially slower across our 3-project graph
+       but eliminate the file-lock race for good. -->
+  <PropertyGroup>
+    <BuildInParallel>false</BuildInParallel>
+  </PropertyGroup>
 </Project>
