@@ -45,7 +45,7 @@ if not "%~1"=="" (
         set "GAME_PATH=%~1"
         goto :found_game
     )
-    echo ERROR: %GAME_EXE% not found at: %~1
+    echo ERROR: %GAME_EXE% not found at: "%~1"
     echo.
     exit /b 1
 )
@@ -211,7 +211,7 @@ echo   2. Start OpenTrack and enable tracking
 echo   3. Launch %GAME_DISPLAY_NAME%
 echo.
 if defined MOD_CONTROLS (
-    echo %MOD_CONTROLS%
+    echo !MOD_CONTROLS!
     echo.
 )
 exit /b 0

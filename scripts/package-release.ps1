@@ -88,7 +88,16 @@ if (-not (Test-Path $manifestSource)) {
 $manifestJson = Get-Content $manifestSource -Raw | ConvertFrom-Json
 $manifestJson.mod_info.version = $version
 $manifestDest = Join-Path $ghStagingDir "launcher-manifest.json"
-$manifestJson | ConvertTo-Json -Depth 10 | Set-Content $manifestDest -Encoding UTF8
+# `Set-Content -Encoding UTF8` on Windows PowerShell 5.1 writes a BOM
+# (EF BB BF) which serde_json rejects with "expected value at line 1
+# column 1". Write through the .NET API with an explicit no-BOM encoder
+# so the file is portable across every strict JSON parser.
+$utf8NoBom = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllText(
+    $manifestDest,
+    ($manifestJson | ConvertTo-Json -Depth 10),
+    $utf8NoBom
+)
 Write-Host "  launcher-manifest.json (v$version)" -ForegroundColor Green
 
 # Copy mod files to mod subfolder
