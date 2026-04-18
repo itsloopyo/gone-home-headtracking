@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "mod_info": {
+    "name": "GoneHomeHeadTracking",
+    "version": "0.0.0",
+    "game_id": "gone-home"
+  },
+  "strategy": "MonoCecil",
+  "delivery_mode": "install_cmd",
+  "install_script": "install.cmd",
+  "uninstall_script": "uninstall.cmd"
+}

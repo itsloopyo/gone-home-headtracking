@@ -77,6 +77,20 @@ foreach ($script in @("install.cmd", "uninstall.cmd")) {
     Write-Host "  $script" -ForegroundColor Green
 }
 
+# Stamp launcher-manifest.json with the real release version and copy it
+# into the installer ZIP root. The launcher reads this file to decide how
+# to stage the mod (delivery_mode: install_cmd -> shell out to install.cmd).
+$manifestSource = Join-Path $projectRoot "launcher-manifest.json"
+if (-not (Test-Path $manifestSource)) {
+    Write-Host "ERROR: launcher-manifest.json not found at repo root ($manifestSource)" -ForegroundColor Red
+    exit 1
+}
+$manifestJson = Get-Content $manifestSource -Raw | ConvertFrom-Json
+$manifestJson.mod_info.version = $version
+$manifestDest = Join-Path $ghStagingDir "launcher-manifest.json"
+$manifestJson | ConvertTo-Json -Depth 10 | Set-Content $manifestDest -Encoding UTF8
+Write-Host "  launcher-manifest.json (v$version)" -ForegroundColor Green
+
 # Copy mod files to mod subfolder
 $modDestDir = Join-Path $ghStagingDir "mod"
 New-Item -ItemType Directory -Path $modDestDir -Force | Out-Null

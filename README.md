@@ -1,6 +1,8 @@
 # Gone Home Head Tracking
 
-![Mod GIF](assets/readme-clip.gif)
+![Mod GIF](https://raw.githubusercontent.com/itsloopyo/gone-home-headtracking/main/assets/readme-clip.gif)
+
+https://raw.githubusercontent.com/itsloopyo/gone-home-headtracking/main/assets/readme-clip.gif
 
 An **unofficial** head tracking mod for Gone Home with decoupled look + aim support. Enables natural head movement using OpenTrack-compatible trackers while maintaining independent mouse aim.
 
