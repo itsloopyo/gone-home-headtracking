@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0] - 2026-04-29
+
+### Other
+
+- Sync to shared standards: chord hotkeys, non-interactive release, data-driven detection
+- Add anyKey/anyKeyDown stubs to Unity Input
+
 ## [1.0.6] - 2026-04-18
 
 ### Changed
