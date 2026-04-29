@@ -231,6 +231,8 @@ namespace UnityEngine {
         public static float GetAxis(string axisName) => 0;
         public static float GetAxisRaw(string axisName) => 0;
         public static Vector3 mousePosition { get; }
+        public static bool anyKey { get; }
+        public static bool anyKeyDown { get; }
     }
     public enum KeyCode {
         None = 0, Backspace = 8, Tab = 9, Clear = 12, Return = 13, Pause = 19, Escape = 27, Space = 32,
