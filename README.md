@@ -59,11 +59,17 @@ This mod includes built-in smoothing to handle network jitter, so if your tracki
 
 ## Controls
 
-| Key | Action |
-|-----|--------|
-| **Home** | Recenter (set current head position as neutral) |
-| **End** | Toggle head tracking on/off |
-| **Page Up** | Toggle position tracking (6DOF/3DOF) |
+Two equivalent binding sets - use whichever your keyboard has. The chord set
+exists for laptops and tenkeyless boards without a nav cluster.
+
+| Action                  | Nav-cluster | Chord            |
+|-------------------------|-------------|------------------|
+| Recenter                | `Home`      | `Ctrl+Shift+T`   |
+| Toggle tracking         | `End`       | `Ctrl+Shift+Y`   |
+| Toggle position tracking| `Page Up`   | `Ctrl+Shift+G`   |
+
+The nav-cluster keys are configurable in `HeadTracking.cfg`; the chord set
+is fixed.
 
 ## Configuration
 

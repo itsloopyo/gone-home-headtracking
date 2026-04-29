@@ -94,23 +94,27 @@ namespace HeadTracking
                 InitializeAimSystem();
             }
 
-            // Check recenter hotkey
-            if (Input.GetKeyDown(_config.RecenterKey))
+            // Hotkey checks: Input.anyKeyDown short-circuits the lookups on the
+            // overwhelming majority of frames where no key transition occurs.
+            // Two equivalent binding sets per the project standard: the configurable
+            // nav-cluster key, OR the fixed Ctrl+Shift+<T/Y/G> chord.
+            if (Input.anyKeyDown)
             {
-                Recenter();
-            }
+                if (Input.GetKeyDown(_config.RecenterKey) || ChordPressed(KeyCode.T))
+                {
+                    Recenter();
+                }
 
-            // Check toggle hotkey
-            if (Input.GetKeyDown(_config.ToggleKey))
-            {
-                ToggleTracking();
-            }
+                if (Input.GetKeyDown(_config.ToggleKey) || ChordPressed(KeyCode.Y))
+                {
+                    ToggleTracking();
+                }
 
-            // Check position toggle hotkey
-            if (Input.GetKeyDown(_config.PositionToggleKey))
-            {
-                _cameraController.PositionEnabled = !_cameraController.PositionEnabled;
-                Log($"Position tracking {(_cameraController.PositionEnabled ? "enabled" : "disabled")}");
+                if (Input.GetKeyDown(_config.PositionToggleKey) || ChordPressed(KeyCode.G))
+                {
+                    _cameraController.PositionEnabled = !_cameraController.PositionEnabled;
+                    Log($"Position tracking {(_cameraController.PositionEnabled ? "enabled" : "disabled")}");
+                }
             }
 
 
@@ -121,6 +125,14 @@ namespace HeadTracking
                 _wasConnected = isConnected;
                 Log(isConnected ? "OpenTrack connected" : "OpenTrack disconnected");
             }
+        }
+
+        private static bool ChordPressed(KeyCode letter)
+        {
+            if (!Input.GetKeyDown(letter)) return false;
+            bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+            bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            return ctrl && shift;
         }
 
         private void LateUpdate()
