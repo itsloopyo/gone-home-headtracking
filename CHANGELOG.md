@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.2.0] - 2026-04-30
+
+### Other
+
+- Sync install scripts to template with /y fix, bump to 1.1.1
+- Expand submodule pointer commits in generated changelogs
+- Fix /y flag detection and bundle vendored BepInEx in installers
+- Cycle tracking mode on PgUp instead of toggling position only
+- Use WriteAllBytes for .cmd output to avoid Defender race
+
 ## [1.1.0] - 2026-04-29
 
 ### Other
