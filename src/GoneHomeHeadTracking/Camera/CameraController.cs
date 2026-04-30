@@ -36,6 +36,9 @@ namespace HeadTracking
         /// <summary>Whether positional tracking is enabled.</summary>
         public bool PositionEnabled { get; set; } = true;
 
+        /// <summary>Whether rotational tracking is enabled.</summary>
+        public bool RotationEnabled { get; set; } = true;
+
         /// <summary>Last applied position offset for transition fadeout.</summary>
         public Vec3 LastPositionOffset => _lastPositionOffset;
 
@@ -100,11 +103,20 @@ namespace HeadTracking
             float headPitch = processed.Pitch;
             float headRoll = processed.Roll;
 
-            // Apply rotation via view matrix — never touch camera.transform.
-            // Pitch negated to match Euler convention (positive pitch = look up).
-            ViewMatrixModifier.ApplyHeadRotation(camera, headYaw, -headPitch, headRoll);
-
-            _trackingQuaternion = CameraRotationComposer.GetTrackingOnlyRotation(headYaw, headPitch, headRoll);
+            if (RotationEnabled)
+            {
+                // Apply rotation via view matrix — never touch camera.transform.
+                // Pitch negated to match Euler convention (positive pitch = look up).
+                ViewMatrixModifier.ApplyHeadRotation(camera, headYaw, -headPitch, headRoll);
+                _trackingQuaternion = CameraRotationComposer.GetTrackingOnlyRotation(headYaw, headPitch, headRoll);
+            }
+            else
+            {
+                // Reset to clean state so any previously applied head rotation is cleared,
+                // and so the position branch below reads a fresh game view matrix.
+                camera.ResetWorldToCameraMatrix();
+                _trackingQuaternion = Quaternion.identity;
+            }
 
             // Position tracking: use tracker 6DOF data via PositionProcessor
             if (PositionEnabled && _positionProcessor != null)

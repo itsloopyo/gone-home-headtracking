@@ -18,7 +18,7 @@ set "FRAMEWORK_TYPE=MonoCecil"
 set "MANAGED_SUBFOLDER=GoneHome_Data\Managed"
 set "ASSEMBLY_DLL=Assembly-CSharp.dll"
 set "PATCHER_FILE=BootstrapPatcher.cs"
-set "MOD_CONTROLS=Controls:&echo   Home    - Recenter head tracking&echo   End     - Toggle head tracking on/off&echo   PgUp    - Toggle position tracking"
+set "MOD_CONTROLS=Controls:&echo   Home    - Recenter head tracking&echo   End     - Toggle head tracking on/off&echo   PgUp    - Cycle tracking mode (full / rotation only / position only)"
 :: --- END CONFIG BLOCK ---
 
 call :detect_yes_flag %*

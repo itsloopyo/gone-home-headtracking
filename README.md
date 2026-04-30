@@ -72,13 +72,20 @@ If your phone tracking app already smooths its output, you can send directly to 
 
 ## Controls
 
-Two equivalent binding sets. Use whichever your keyboard has; the chord set exists for laptops and tenkeyless boards without a nav cluster.
+Two equivalent binding sets - use whichever your keyboard has:
 
-| Action                   | Nav-cluster | Chord            |
-|--------------------------|-------------|------------------|
-| Recenter                 | `Home`      | `Ctrl+Shift+T`   |
-| Toggle tracking          | `End`       | `Ctrl+Shift+Y`   |
-| Toggle position tracking | `Page Up`   | `Ctrl+Shift+G`   |
+| Action              | Nav-cluster | Chord           |
+|---------------------|-------------|-----------------|
+| Recenter            | `Home`      | `Ctrl+Shift+T`  |
+| Toggle tracking     | `End`       | `Ctrl+Shift+Y`  |
+| Cycle tracking mode | `Page Up`   | `Ctrl+Shift+G`  |
+
+`Page Up` / `Ctrl+Shift+G` cycles tracking mode:
+
+1. Normal head-tracked gameplay
+2. Positional tracking disabled, rotational tracking enabled
+3. Rotational tracking disabled, positional tracking enabled
+4. Back to normal
 
 The nav-cluster keys are configurable in `HeadTracking.cfg`; the chord set is fixed.
 

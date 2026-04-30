@@ -20,6 +20,8 @@ namespace HeadTracking
         /// <summary>Singleton instance</summary>
         public static HeadTrackingMod Instance { get; private set; }
 
+        private enum TrackingMode { Full, RotationOnly, PositionOnly }
+
         private OpenTrackReceiver _receiver;
         private CameraController _cameraController;
         private AimController _aimController;
@@ -27,6 +29,7 @@ namespace HeadTracking
         private GameReticleFinder _gameReticleFinder;
         private InteractionTextPositioner _interactionTextPositioner;
         private bool _isEnabled;
+        private TrackingMode _trackingMode = TrackingMode.Full;
 
         // Configuration
         private HeadTrackingConfig _config;
@@ -112,8 +115,7 @@ namespace HeadTracking
 
                 if (Input.GetKeyDown(_config.PositionToggleKey) || ChordPressed(KeyCode.G))
                 {
-                    _cameraController.PositionEnabled = !_cameraController.PositionEnabled;
-                    Log($"Position tracking {(_cameraController.PositionEnabled ? "enabled" : "disabled")}");
+                    CycleTrackingMode();
                 }
             }
 
@@ -133,6 +135,29 @@ namespace HeadTracking
             bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
             bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
             return ctrl && shift;
+        }
+
+        private void CycleTrackingMode()
+        {
+            _trackingMode = (TrackingMode)(((int)_trackingMode + 1) % 3);
+            switch (_trackingMode)
+            {
+                case TrackingMode.Full:
+                    _cameraController.RotationEnabled = true;
+                    _cameraController.PositionEnabled = true;
+                    Log("Tracking mode: full (rotation + position)");
+                    break;
+                case TrackingMode.RotationOnly:
+                    _cameraController.RotationEnabled = true;
+                    _cameraController.PositionEnabled = false;
+                    Log("Tracking mode: rotation only");
+                    break;
+                case TrackingMode.PositionOnly:
+                    _cameraController.RotationEnabled = false;
+                    _cameraController.PositionEnabled = true;
+                    Log("Tracking mode: position only");
+                    break;
+            }
         }
 
         private void LateUpdate()
