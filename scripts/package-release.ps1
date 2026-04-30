@@ -130,6 +130,8 @@ foreach ($doc in $docFiles) {
     }
 }
 
+Copy-SharedBundle -StagingDir $ghStagingDir
+
 $ghZipName = "GoneHomeHeadTracking-v$version-installer.zip"
 $ghZipPath = Join-Path $distDir $ghZipName
 if (Test-Path $ghZipPath) { Remove-Item $ghZipPath -Force }
