@@ -37,13 +37,12 @@ Import-Module (Join-Path $projectRoot "cameraunlock-core\powershell\ModDeploymen
 # patcher script-block below references this in its closure scope.
 $cecilPath = & (Join-Path $scriptDir "ensure-cecil.ps1") -ToolsDir $toolsDir
 
+$buildOutput = Join-Path $projectRoot "src\GoneHomeHeadTracking\bin\$Configuration\net48"
 $result = Invoke-DevDeployCecil `
     -GameId 'gone-home' `
     -GameDisplayName 'Gone Home' `
-    -ProjectRoot $projectRoot `
-    -ProjectName 'GoneHomeHeadTracking' `
+    -BuildOutputPath $buildOutput `
     -ModDllName 'HeadTracking.dll' `
-    -Configuration $Configuration `
     -ManagedSubfolder 'GoneHome_Data\Managed' `
     -ExtraDlls @('CameraUnlock.Core.dll', 'CameraUnlock.Core.Unity.dll') `
     -GivenPath $GivenPath `
