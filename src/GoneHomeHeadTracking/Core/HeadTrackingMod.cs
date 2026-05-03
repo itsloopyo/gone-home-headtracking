@@ -80,6 +80,7 @@ namespace HeadTracking
             };
             var positionInterpolator = new PositionInterpolator();
             _cameraController = new CameraController(_receiver, processor, interpolator, positionProcessor, positionInterpolator);
+            _cameraController.WorldSpaceYaw = _config.WorldSpaceYaw;
 
             // Aim system will be initialized lazily in Update() to avoid early init issues
             _aimSystemInitialized = false;
@@ -117,6 +118,11 @@ namespace HeadTracking
                 {
                     CycleTrackingMode();
                 }
+
+                if (Input.GetKeyDown(_config.YawModeKey) || ChordPressed(KeyCode.H))
+                {
+                    ToggleYawMode();
+                }
             }
 
 
@@ -135,6 +141,14 @@ namespace HeadTracking
             bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
             bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
             return ctrl && shift;
+        }
+
+        private void ToggleYawMode()
+        {
+            _cameraController.WorldSpaceYaw = !_cameraController.WorldSpaceYaw;
+            Log(_cameraController.WorldSpaceYaw
+                ? "Yaw mode: world-space (horizon-locked)"
+                : "Yaw mode: camera-local");
         }
 
         private void CycleTrackingMode()

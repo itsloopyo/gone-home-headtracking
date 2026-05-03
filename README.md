@@ -79,6 +79,7 @@ Two equivalent binding sets - use whichever your keyboard has:
 | Recenter            | `Home`      | `Ctrl+Shift+T`  |
 | Toggle tracking     | `End`       | `Ctrl+Shift+Y`  |
 | Cycle tracking mode | `Page Up`   | `Ctrl+Shift+G`  |
+| Toggle yaw mode     | `Page Down` | `Ctrl+Shift+H`  |
 
 `Page Up` / `Ctrl+Shift+G` cycles tracking mode:
 
@@ -86,6 +87,8 @@ Two equivalent binding sets - use whichever your keyboard has:
 2. Positional tracking disabled, rotational tracking enabled
 3. Rotational tracking disabled, positional tracking enabled
 4. Back to normal
+
+`Page Down` / `Ctrl+Shift+H` toggles yaw mode between horizon-locked (default; yaw stays around the world up axis even when looking up or down) and camera-local (yaw follows the camera's current up axis, leaning at extreme pitch).
 
 The nav-cluster keys are configurable in `HeadTracking.cfg`; the chord set is fixed.
 
@@ -102,6 +105,10 @@ UdpPort = 4242
 RecenterKey = Home
 ToggleKey = End
 PositionToggleKey = PageUp
+YawModeKey = PageDown
+
+# Yaw mode: true = horizon-locked (default), false = camera-local
+WorldSpaceYaw = true
 
 # Sensitivity (multipliers, 0.1-5.0)
 YawSensitivity = 1.0
@@ -145,6 +152,9 @@ ReticleColor = 1.0,1.0,1.0,1.0
 **Wrong rotation axis or inverted motion:**
 - Flip `InvertPositionX`, `InvertPositionY`, or `InvertPositionZ` in `HeadTracking.cfg`.
 - For inverted yaw or pitch, use OpenTrack's per-axis "Invert" switches in the Output mapping.
+
+**Yaw feels wrong when looking up or down at extreme angles:**
+- Try toggling between world-locked and camera-local yaw with `Page Down` (or `Ctrl+Shift+H`). World-locked (default) is horizon-stable; camera-local follows the camera's current up-axis.
 
 **Game crashes on startup:**
 1. Run `uninstall.cmd` to restore the original `Assembly-CSharp.dll`.

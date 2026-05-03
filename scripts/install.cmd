@@ -19,7 +19,7 @@ set "FRAMEWORK_TYPE=MonoCecil"
 set "MANAGED_SUBFOLDER=GoneHome_Data\Managed"
 set "ASSEMBLY_DLL=Assembly-CSharp.dll"
 set "PATCHER_FILE=BootstrapPatcher.cs"
-set "MOD_CONTROLS=Controls:&echo   Home    - Recenter head tracking&echo   End     - Toggle head tracking on/off&echo   PgUp    - Cycle tracking mode (full / rotation only / position only)"
+set "MOD_CONTROLS=Controls:&echo   Home    - Recenter head tracking&echo   End     - Toggle head tracking on/off&echo   PgUp    - Cycle tracking mode (full / rotation only / position only)&echo   PgDn    - Toggle yaw mode (horizon-locked / camera-local)"
 :: --- END CONFIG BLOCK ---
 
 :: WRAPPER_DIR is what the body uses to resolve sibling files (mod/,

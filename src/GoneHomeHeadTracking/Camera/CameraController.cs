@@ -39,6 +39,13 @@ namespace HeadTracking
         /// <summary>Whether rotational tracking is enabled.</summary>
         public bool RotationEnabled { get; set; } = true;
 
+        /// <summary>
+        /// Yaw rotation mode. true = horizon-locked (yaw around world up axis;
+        /// pitch/roll camera-local). false = camera-local yaw (all axes composed
+        /// in camera space; leans at extreme pitch).
+        /// </summary>
+        public bool WorldSpaceYaw { get; set; } = true;
+
         /// <summary>Last applied position offset for transition fadeout.</summary>
         public Vec3 LastPositionOffset => _lastPositionOffset;
 
@@ -107,7 +114,18 @@ namespace HeadTracking
             {
                 // Apply rotation via view matrix — never touch camera.transform.
                 // Pitch negated to match Euler convention (positive pitch = look up).
-                ViewMatrixModifier.ApplyHeadRotation(camera, headYaw, -headPitch, headRoll);
+                if (WorldSpaceYaw)
+                {
+                    ViewMatrixModifier.ApplyHeadRotationDecomposed(camera, headYaw, -headPitch, headRoll);
+                }
+                else
+                {
+                    // ApplyHeadRotation applies head rotation in view (camera-local) space
+                    // by premultiplying the view matrix; this inverts the effective camera
+                    // rotation, so the external roll must be negated to keep tilt direction
+                    // matching the world-space branch.
+                    ViewMatrixModifier.ApplyHeadRotation(camera, headYaw, -headPitch, -headRoll);
+                }
                 _trackingQuaternion = CameraRotationComposer.GetTrackingOnlyRotation(headYaw, headPitch, headRoll);
             }
             else

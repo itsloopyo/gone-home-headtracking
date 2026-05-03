@@ -27,6 +27,11 @@ namespace HeadTracking
         public KeyCode RecenterKey { get; set; } = KeyCode.Home;
         public KeyCode ToggleKey { get; set; } = KeyCode.End;
         public KeyCode PositionToggleKey { get; set; } = KeyCode.PageUp;
+        public KeyCode YawModeKey { get; set; } = KeyCode.PageDown;
+
+        // Yaw mode: true = horizon-locked yaw (rotates around world up regardless of pitch),
+        // false = camera-local yaw (rotates around camera's current up axis, leans at extreme pitch).
+        public bool WorldSpaceYaw { get; set; } = true;
 
         // Position tracking
         public float PositionSensitivityX { get; set; } = 1.0f;
@@ -122,6 +127,20 @@ namespace HeadTracking
                                 config.PositionToggleKey = (KeyCode)Enum.Parse(typeof(KeyCode), value, true);
                             }
                             break;
+                        case "yawmodekey":
+                            if (!Enum.IsDefined(typeof(KeyCode), value))
+                            {
+                                log?.Invoke($"Invalid YawModeKey value '{value}' - using default {config.YawModeKey}");
+                            }
+                            else
+                            {
+                                config.YawModeKey = (KeyCode)Enum.Parse(typeof(KeyCode), value, true);
+                            }
+                            break;
+                        case "worldspaceyaw":
+                            if (bool.TryParse(value, out bool worldYaw))
+                                config.WorldSpaceYaw = worldYaw;
+                            break;
                         case "positionsensitivityx":
                             if (float.TryParse(value, out float posX))
                                 config.PositionSensitivityX = posX;
@@ -183,6 +202,12 @@ namespace HeadTracking
                     "RecenterKey = Home\n" +
                     "ToggleKey = End\n" +
                     "PositionToggleKey = PageUp\n" +
+                    "YawModeKey = PageDown\n" +
+                    "\n" +
+                    "# --- Yaw Mode ---\n" +
+                    "# true = horizon-locked yaw (default, rotates around world up regardless of pitch)\n" +
+                    "# false = camera-local yaw (rotates around camera's current up axis; leans at extreme pitch)\n" +
+                    "WorldSpaceYaw = true\n" +
                     "\n" +
                     "# --- Sensitivity ---\n" +
                     "YawSensitivity = 1.0\n" +
