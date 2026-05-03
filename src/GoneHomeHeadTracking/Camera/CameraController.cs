@@ -121,11 +121,7 @@ namespace HeadTracking
                 }
                 else
                 {
-                    // ApplyHeadRotation applies head rotation in view (camera-local) space
-                    // by premultiplying the view matrix; this inverts the effective camera
-                    // rotation, so the external roll must be negated to keep tilt direction
-                    // matching the world-space branch.
-                    ViewMatrixModifier.ApplyHeadRotation(camera, headYaw, -headPitch, -headRoll);
+                    ViewMatrixModifier.ApplyHeadRotation(camera, headYaw, -headPitch, headRoll);
                 }
                 _trackingQuaternion = CameraRotationComposer.GetTrackingOnlyRotation(headYaw, headPitch, headRoll);
             }
