@@ -40,11 +40,12 @@ namespace HeadTracking
         public bool RotationEnabled { get; set; } = true;
 
         /// <summary>
-        /// Yaw rotation mode. true = horizon-locked (yaw around world up axis;
-        /// pitch/roll camera-local). false = camera-local yaw (all axes composed
-        /// in camera space; leans at extreme pitch).
+        /// Yaw rotation mode. false (default) = camera-local yaw (all axes composed
+        /// in camera space; leans at extreme head yaw + mouse pitch). true =
+        /// horizon-locked yaw around world up (causes camera arc at extreme head
+        /// yaw + mouse pitch - geometrically inherent to the composition).
         /// </summary>
-        public bool WorldSpaceYaw { get; set; } = true;
+        public bool WorldSpaceYaw { get; set; } = false;
 
         /// <summary>Last applied position offset for transition fadeout.</summary>
         public Vec3 LastPositionOffset => _lastPositionOffset;

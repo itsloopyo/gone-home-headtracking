@@ -5,19 +5,20 @@ using UnityEngine;
 namespace HeadTracking
 {
     /// <summary>
-    /// Computes aim offset from head tracking rotation.
-    /// Uses shared CanvasCompensation utilities from cameraunlock-core.
+    /// Computes aim offset from head tracking rotation by projecting the clean
+    /// (mouse-controlled) aim direction through the head-tracked view matrix.
+    /// This works in both yaw modes because the projection uses whatever
+    /// worldToCameraMatrix the CameraController set this frame.
     /// </summary>
     public sealed class AimController
     {
-        // Fixed projection distance — Gone Home is a walking sim with no weapons,
+        // Fixed projection distance - Gone Home is a walking sim with no weapons,
         // so we don't need to track per-frame hitpoints. A fixed distance gives
         // a stable reticle that doesn't hop between colliders.
         private const float ProjectionDistance = 10f;
 
         private readonly CameraController _cameraController;
 
-        // Computed state
         private Vector2 _screenOffset;
 
         public Vector2 ScreenOffset => _screenOffset;
@@ -32,19 +33,13 @@ namespace HeadTracking
             _screenOffset = Vector2.zero;
         }
 
-        /// <summary>
-        /// Computes aim offset using shared cameraunlock-core utilities.
-        /// Uses WorldToScreenPoint projection which correctly handles all rotation combinations.
-        /// </summary>
-        /// <param name="camera">The camera to compute aim for. May be null during scene transitions (expected Unity state).</param>
         public void UpdateAim(Camera camera)
         {
-            // Camera may legitimately be null during Unity scene transitions - this is expected
+            // Camera may legitimately be null during Unity scene transitions - this is expected.
             if (camera == null) return;
 
             // camera.transform is unmodified (view matrix only), so transform.forward IS the aim direction.
             Vector3 aimDir = camera.transform.forward;
-
             _screenOffset = CanvasCompensation.CalculateAimScreenOffset(camera, aimDir, ProjectionDistance, 1f);
         }
     }
