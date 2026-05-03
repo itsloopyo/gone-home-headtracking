@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.3.0] - 2026-05-03
+
+### Other
+
+- Add DX11 overlay header for crosshair rendering
+- Update PositionInterpolator tests for bounded extrapolation
+- Skip vendor refresh when SHA-256 matches existing copy
+- Fix degenerate-input bugs in scanners, projection, and color parser
+- Add yaw-mode key and WorldSpaceYaw config options
+- Quote /y flag detection and add shared install/uninstall bodies
+- Convert install/uninstall.cmd to thin wrappers over shared bodies
+- Add DevDeploy module with Cecil dev-install orchestrator
+- Auto-refresh cameraunlock-core submodule in Copy-SharedBundle
+- Add yaw mode toggle (world-space vs camera-local)
+- Add install bodies and dev-deploy orchestrators for non-Cecil frameworks
+- Default yaw mode to camera-local
+- Resolve exe relpath from games.json in ASI/shim dev-deploy
+- Add automatic port retry to C++ UdpReceiver
+- Take BuildOutputPath in dev-deploy and add loader/config auto-install
+- Fix roll sign in camera-local yaw branch
+
 ## [1.2.0] - 2026-04-30
 
 ### Other
