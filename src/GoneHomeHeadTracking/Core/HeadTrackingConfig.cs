@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 
+using CameraUnlock.Core.Config;
 using CameraUnlock.Core.Protocol;
 using UnityEngine;
 
@@ -63,114 +65,81 @@ namespace HeadTracking
                     return config;
                 }
 
-                foreach (string line in File.ReadAllLines(configPath))
+                Dictionary<string, string> values = ConfigParsingUtils.ParseIniFile(configPath);
+                foreach (var kvp in values)
                 {
-                    string trimmed = line.Trim();
-                    if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith("#") || trimmed.StartsWith(";"))
-                        continue;
-
-                    int eqIndex = trimmed.IndexOf('=');
-                    if (eqIndex <= 0) continue;
-
-                    string key = trimmed.Substring(0, eqIndex).Trim().ToLowerInvariant();
-                    string value = trimmed.Substring(eqIndex + 1).Trim();
+                    string key = kvp.Key.ToLowerInvariant();
+                    string value = kvp.Value;
 
                     switch (key)
                     {
                         case "udpport":
-                            if (int.TryParse(value, out int port))
+                            if (ConfigParsingUtils.TryParseInt(value, out int port))
                                 config.UdpPort = port;
                             break;
                         case "yawsensitivity":
-                            if (float.TryParse(value, out float yaw))
+                            if (ConfigParsingUtils.TryParseFloat(value, out float yaw))
                                 config.YawSensitivity = yaw;
                             break;
                         case "pitchsensitivity":
-                            if (float.TryParse(value, out float pitch))
+                            if (ConfigParsingUtils.TryParseFloat(value, out float pitch))
                                 config.PitchSensitivity = pitch;
                             break;
                         case "rollsensitivity":
-                            if (float.TryParse(value, out float roll))
+                            if (ConfigParsingUtils.TryParseFloat(value, out float roll))
                                 config.RollSensitivity = roll;
                             break;
                         case "smoothing":
-                            if (float.TryParse(value, out float smoothing))
+                            if (ConfigParsingUtils.TryParseFloat(value, out float smoothing))
                                 config.Smoothing = Math.Max(0f, Math.Min(1f, smoothing));
                             break;
                         case "recenterkey":
-                            if (!Enum.IsDefined(typeof(KeyCode), value))
-                            {
-                                log?.Invoke($"Invalid RecenterKey value '{value}' - using default {config.RecenterKey}");
-                            }
-                            else
-                            {
-                                config.RecenterKey = (KeyCode)Enum.Parse(typeof(KeyCode), value, true);
-                            }
+                            config.RecenterKey = ParseKeyCode(value, config.RecenterKey, "RecenterKey", log);
                             break;
                         case "togglekey":
-                            if (!Enum.IsDefined(typeof(KeyCode), value))
-                            {
-                                log?.Invoke($"Invalid ToggleKey value '{value}' - using default {config.ToggleKey}");
-                            }
-                            else
-                            {
-                                config.ToggleKey = (KeyCode)Enum.Parse(typeof(KeyCode), value, true);
-                            }
+                            config.ToggleKey = ParseKeyCode(value, config.ToggleKey, "ToggleKey", log);
                             break;
                         case "positiontogglekey":
-                            if (!Enum.IsDefined(typeof(KeyCode), value))
-                            {
-                                log?.Invoke($"Invalid PositionToggleKey value '{value}' - using default {config.PositionToggleKey}");
-                            }
-                            else
-                            {
-                                config.PositionToggleKey = (KeyCode)Enum.Parse(typeof(KeyCode), value, true);
-                            }
+                            config.PositionToggleKey = ParseKeyCode(value, config.PositionToggleKey, "PositionToggleKey", log);
                             break;
                         case "yawmodekey":
-                            if (!Enum.IsDefined(typeof(KeyCode), value))
-                            {
-                                log?.Invoke($"Invalid YawModeKey value '{value}' - using default {config.YawModeKey}");
-                            }
-                            else
-                            {
-                                config.YawModeKey = (KeyCode)Enum.Parse(typeof(KeyCode), value, true);
-                            }
+                            config.YawModeKey = ParseKeyCode(value, config.YawModeKey, "YawModeKey", log);
                             break;
                         case "worldspaceyaw":
-                            if (bool.TryParse(value, out bool worldYaw))
+                            if (ConfigParsingUtils.TryParseBool(value, out bool worldYaw))
                                 config.WorldSpaceYaw = worldYaw;
                             break;
                         case "positionsensitivityx":
-                            if (float.TryParse(value, out float posX))
+                            if (ConfigParsingUtils.TryParseFloat(value, out float posX))
                                 config.PositionSensitivityX = posX;
                             break;
                         case "positionsensitivityy":
-                            if (float.TryParse(value, out float posY))
+                            if (ConfigParsingUtils.TryParseFloat(value, out float posY))
                                 config.PositionSensitivityY = posY;
                             break;
                         case "positionsensitivityz":
-                            if (float.TryParse(value, out float posZ))
+                            if (ConfigParsingUtils.TryParseFloat(value, out float posZ))
                                 config.PositionSensitivityZ = posZ;
                             break;
                         case "invertpositionx":
-                            if (bool.TryParse(value, out bool invX))
+                            if (ConfigParsingUtils.TryParseBool(value, out bool invX))
                                 config.InvertPositionX = invX;
                             break;
                         case "invertpositiony":
-                            if (bool.TryParse(value, out bool invY))
+                            if (ConfigParsingUtils.TryParseBool(value, out bool invY))
                                 config.InvertPositionY = invY;
                             break;
                         case "invertpositionz":
-                            if (bool.TryParse(value, out bool invZ))
+                            if (ConfigParsingUtils.TryParseBool(value, out bool invZ))
                                 config.InvertPositionZ = invZ;
                             break;
                         case "showreticle":
-                            if (bool.TryParse(value, out bool show))
+                            if (ConfigParsingUtils.TryParseBool(value, out bool show))
                                 config.ShowReticle = show;
                             break;
                         case "reticlecolor":
-                            config.ReticleColor = ParseColor(value);
+                            if (ConfigParsingUtils.TryParseColor(value, out float[] rgba))
+                                config.ReticleColor = new Color(rgba[0], rgba[1], rgba[2], rgba[3]);
                             break;
                     }
                 }
@@ -183,6 +152,16 @@ namespace HeadTracking
             }
 
             return config;
+        }
+
+        private static KeyCode ParseKeyCode(string value, KeyCode fallback, string settingName, Action<string> log)
+        {
+            if (!Enum.IsDefined(typeof(KeyCode), value))
+            {
+                log?.Invoke($"Invalid {settingName} value '{value}' - using default {fallback}");
+                return fallback;
+            }
+            return (KeyCode)Enum.Parse(typeof(KeyCode), value, true);
         }
 
         private static void WriteDefaults(string configPath, Action<string> log)
@@ -238,30 +217,12 @@ namespace HeadTracking
         }
 
         /// <summary>
-        /// Parses color from R,G,B,A format (e.g., "1.0,1.0,1.0,0.8")
-        /// </summary>
-        private static Color ParseColor(string value)
-        {
-            string[] parts = value.Split(',');
-            if (parts.Length < 3)
-                return Color.white;
-
-            float r = 1f, g = 1f, b = 1f, a = 1f;
-            if (float.TryParse(parts[0].Trim(), out float parsedR)) r = parsedR;
-            if (float.TryParse(parts[1].Trim(), out float parsedG)) g = parsedG;
-            if (float.TryParse(parts[2].Trim(), out float parsedB)) b = parsedB;
-            if (parts.Length >= 4 && float.TryParse(parts[3].Trim(), out float parsedA)) a = parsedA;
-
-            return new Color(r, g, b, a);
-        }
-
-        /// <summary>
         /// Gets the default config file path next to the assembly.
         /// </summary>
         public static string GetDefaultConfigPath()
         {
-            string assemblyDir = Path.GetDirectoryName(typeof(HeadTrackingConfig).Assembly.Location);
-            return Path.Combine(assemblyDir ?? "", "HeadTracking.cfg");
+            string assemblyDir = ConfigParsingUtils.GetAssemblyDirectory(typeof(HeadTrackingConfig).Assembly);
+            return Path.Combine(assemblyDir, "HeadTracking.cfg");
         }
     }
 }

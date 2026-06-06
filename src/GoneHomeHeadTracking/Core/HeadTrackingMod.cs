@@ -3,6 +3,7 @@ using CameraUnlock.Core.Data;
 using CameraUnlock.Core.Math;
 using CameraUnlock.Core.Processing;
 using CameraUnlock.Core.Protocol;
+using CameraUnlock.Core.Unity.Extensions;
 using CameraUnlock.Core.Unity.Rendering;
 using UnityEngine;
 
@@ -101,25 +102,25 @@ namespace HeadTracking
             // Hotkey checks: Input.anyKeyDown short-circuits the lookups on the
             // overwhelming majority of frames where no key transition occurs.
             // Two equivalent binding sets per the project standard: the configurable
-            // nav-cluster key, OR the fixed Ctrl+Shift+<T/Y/G> chord.
+            // nav-cluster key, OR the fixed Ctrl+Shift chord.
             if (Input.anyKeyDown)
             {
-                if (Input.GetKeyDown(_config.RecenterKey) || ChordPressed(KeyCode.T))
+                if (ChordHotkeys.IsActionPressed(_config.RecenterKey, ChordHotkeys.RecenterLetter))
                 {
                     Recenter();
                 }
 
-                if (Input.GetKeyDown(_config.ToggleKey) || ChordPressed(KeyCode.Y))
+                if (ChordHotkeys.IsActionPressed(_config.ToggleKey, ChordHotkeys.ToggleLetter))
                 {
                     ToggleTracking();
                 }
 
-                if (Input.GetKeyDown(_config.PositionToggleKey) || ChordPressed(KeyCode.G))
+                if (ChordHotkeys.IsActionPressed(_config.PositionToggleKey, ChordHotkeys.PositionLetter))
                 {
                     CycleTrackingMode();
                 }
 
-                if (Input.GetKeyDown(_config.YawModeKey) || ChordPressed(KeyCode.H))
+                if (ChordHotkeys.IsActionPressed(_config.YawModeKey, ChordHotkeys.FourthToggleLetter))
                 {
                     ToggleYawMode();
                 }
@@ -133,14 +134,6 @@ namespace HeadTracking
                 _wasConnected = isConnected;
                 Log(isConnected ? "OpenTrack connected" : "OpenTrack disconnected");
             }
-        }
-
-        private static bool ChordPressed(KeyCode letter)
-        {
-            if (!Input.GetKeyDown(letter)) return false;
-            bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
-            bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-            return ctrl && shift;
         }
 
         private void ToggleYawMode()
