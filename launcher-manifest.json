@@ -20,6 +20,7 @@
       "target": "GoneHome_Data/Managed/Assembly-CSharp.dll",
       "tool": "tools/BootstrapPatcher.exe",
       "args": [ "{input}", "{output}" ],
+      "unpatch_args": [ "unpatch", "{input}", "{output}" ],
       "marker": "HeadTracking_Patched_GoneHome_v4"
     }
   ],

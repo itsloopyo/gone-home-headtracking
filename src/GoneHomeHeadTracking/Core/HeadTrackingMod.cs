@@ -38,6 +38,7 @@ namespace HeadTracking
         // State
         private bool _wasConnected;
         private bool _aimSystemInitialized;
+        private static bool _isQuitting;
         private CameraTrackingHook _cameraHook;
         private Camera _cachedMainCamera;
         private int _cameraCheckCounter;
@@ -308,6 +309,11 @@ namespace HeadTracking
             }
         }
 
+        private void OnApplicationQuit()
+        {
+            _isQuitting = true;
+        }
+
         private void OnDestroy()
         {
             // Destroy camera hook if exists
@@ -317,18 +323,27 @@ namespace HeadTracking
                 _cameraHook = null;
             }
 
-            // Restore game reticle before cleanup
-            _gameReticleFinder?.RestoreGameReticle();
-
-            // Reset interaction text position
-            _interactionTextPositioner?.ResetPosition();
+            // During application quit Unity tears down GameObjects in an
+            // arbitrary order, so the game's reticle / interaction-text objects
+            // we cached may already be half-destroyed: the managed wrapper is
+            // non-null but the native object is gone, and SetActive throws. We
+            // only need to undo our scene-level changes when the mod is being
+            // destroyed mid-session (scene change / recreate), not on quit.
+            if (!_isQuitting)
+            {
+                _gameReticleFinder?.RestoreGameReticle();
+                _interactionTextPositioner?.ResetPosition();
+            }
 
             _receiver?.Dispose();
             _cameraController?.ResetCamera();
             Instance = null;
 
             // Schedule recreation on next frame
-            ModLoader.ScheduleRecreate();
+            if (!_isQuitting)
+            {
+                ModLoader.ScheduleRecreate();
+            }
         }
 
         private static void Log(string message)

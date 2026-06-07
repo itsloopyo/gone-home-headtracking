@@ -81,9 +81,9 @@ namespace UnityEngine {
     public enum HideFlags { None = 0, HideInHierarchy = 1, HideInInspector = 2, DontSaveInEditor = 4, NotEditable = 8, DontSaveInBuild = 16, DontUnloadUnusedAsset = 32, DontSave = 52, HideAndDontSave = 61 }
     public class Camera : Behaviour {
         public delegate void CameraCallback(Camera cam);
-        public static event CameraCallback onPreCull;
-        public static event CameraCallback onPreRender;
-        public static event CameraCallback onPostRender;
+        public static CameraCallback onPreCull;
+        public static CameraCallback onPreRender;
+        public static CameraCallback onPostRender;
         public static Camera main { get; }
         public static Camera current { get; }
         public static Camera[] allCameras { get; }

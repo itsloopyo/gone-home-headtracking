@@ -264,4 +264,79 @@ public static class BootstrapPatcher
             return true;
         }
     }
+
+    /// <summary>
+    /// Reverses PatchAssembly: removes the injected bootstrap call, the
+    /// HeadTrackingBootstrap type, and the marker type, restoring the assembly
+    /// to a functionally-vanilla state. The patch is purely additive, so this
+    /// reversal is exact. Idempotent: an unpatched assembly is left unchanged.
+    /// This is what lets every deploy path derive a clean baseline from a file
+    /// it only ever sees in a patched state, so a patched backup can never be
+    /// captured.
+    /// </summary>
+    public static bool UnpatchAssembly(string assemblyPath)
+    {
+        string managedDir = Path.GetDirectoryName(assemblyPath);
+
+        var resolver = new DefaultAssemblyResolver();
+        resolver.AddSearchDirectory(managedDir);
+
+        var readerParams = new ReaderParameters
+        {
+            AssemblyResolver = resolver,
+            ReadWrite = false,
+            InMemory = true
+        };
+
+        byte[] assemblyBytes = File.ReadAllBytes(assemblyPath);
+        using (var memStream = new MemoryStream(assemblyBytes))
+        using (var assembly = AssemblyDefinition.ReadAssembly(memStream, readerParams))
+        {
+            var module = assembly.MainModule;
+
+            bool hasMarker = module.Types.Any(t => t.Name == PatchMarker);
+            bool hasBootstrap = module.Types.Any(t => t.Namespace == "HeadTracking" && t.Name == BootstrapTypeName);
+            if (!hasMarker && !hasBootstrap)
+            {
+                Console.WriteLine("  Assembly is not patched - nothing to unpatch");
+                return true;
+            }
+
+            // Remove every call to HeadTrackingBootstrap.* (the injected
+            // Initialize() call lives at the head of the game's Start/Awake).
+            int removedCalls = 0;
+            foreach (var type in module.Types)
+            {
+                foreach (var method in type.Methods)
+                {
+                    if (!method.HasBody) continue;
+                    var il = method.Body.GetILProcessor();
+                    var toRemove = method.Body.Instructions
+                        .Where(instr => (instr.OpCode == OpCodes.Call || instr.OpCode == OpCodes.Callvirt)
+                            && instr.Operand is MethodReference
+                            && ((MethodReference)instr.Operand).DeclaringType != null
+                            && ((MethodReference)instr.Operand).DeclaringType.Name == BootstrapTypeName)
+                        .ToList();
+                    foreach (var instr in toRemove)
+                    {
+                        il.Remove(instr);
+                        removedCalls++;
+                    }
+                }
+            }
+
+            // Remove the bootstrap and marker types now that nothing references them.
+            var removeTypes = module.Types
+                .Where(t => t.Name == PatchMarker
+                    || (t.Namespace == "HeadTracking" && t.Name == BootstrapTypeName))
+                .ToList();
+            foreach (var t in removeTypes)
+                module.Types.Remove(t);
+
+            assembly.Write(assemblyPath);
+            Console.WriteLine("  Unpatched " + Path.GetFileName(assemblyPath)
+                + " (removed " + removedCalls + " bootstrap call(s), " + removeTypes.Count + " type(s))");
+            return true;
+        }
+    }
 }

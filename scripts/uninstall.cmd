@@ -20,6 +20,9 @@ set "LEGACY_DLLS="
 :: MonoCecil: used to find + restore the original Assembly-CSharp.dll.
 set "MANAGED_SUBFOLDER=GoneHome_Data\Managed"
 set "ASSEMBLY_DLL=Assembly-CSharp.dll"
+:: MonoCecil: marker the patcher injects; guards against capturing/restoring a
+:: patched Assembly-CSharp.dll as the pristine .original backup.
+set "PATCH_MARKER=HeadTracking_Patched_GoneHome_v4"
 :: MonoCecil: extra files to also remove from MANAGED_SUBFOLDER (config/log
 :: files left behind by the mod itself).
 set "MANAGED_EXTRAS=HeadTracking.cfg HeadTracking.log HeadTracking_BOOT.log HeadTracking.manifest.json"

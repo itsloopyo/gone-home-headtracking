@@ -14,7 +14,7 @@ $projectRoot = Split-Path -Parent $scriptDir
 
 Import-Module (Join-Path $projectRoot "cameraunlock-core\powershell\ReleaseWorkflow.psm1") -Force
 $csprojPath = Join-Path $projectRoot "src\GoneHomeHeadTracking\GoneHomeHeadTracking.csproj"
-$buildOutput = Join-Path $projectRoot "src\GoneHomeHeadTracking\bin\Release\net48"
+$buildOutput = Join-Path $projectRoot "src\GoneHomeHeadTracking\bin\Release\net35"
 $toolsDir = Join-Path $projectRoot "tools"
 $distDir = Join-Path $projectRoot "release"
 

@@ -24,7 +24,7 @@ Write-Host "Creating Unity stub assemblies for CI build..." -ForegroundColor Cya
 $projContent = @"
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net35</TargetFramework>
     <LangVersion>11</LangVersion>
     <AssemblyName>UnityEngine</AssemblyName>
     <NoWarn>CS0169;CS0649;CS0067;CS0660;CS0661</NoWarn>
@@ -63,7 +63,7 @@ foreach ($moduleName in $emptyModules) {
     $emptyProjContent = @"
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net35</TargetFramework>
     <AssemblyName>$moduleName</AssemblyName>
   </PropertyGroup>
   <ItemGroup>

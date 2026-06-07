@@ -1,6 +1,6 @@
 using System;
+using System.IO;
 using System.Reflection;
-using CameraUnlock.Core.Unity.Utilities;
 
 namespace HeadTracking
 {
@@ -33,8 +33,8 @@ namespace HeadTracking
             if (_searched) return;
             _searched = true;
 
-            _fpsCameraType = CrosshairUtility.FindTypeByName("vp_FPSCamera");
-            _nguiHudType = CrosshairUtility.FindTypeByName("NGUI_HUD");
+            _fpsCameraType = FindTypeByName("vp_FPSCamera");
+            _nguiHudType = FindTypeByName("NGUI_HUD");
 
             if (NullHelper.NotNull(_nguiHudType))
             {
@@ -50,6 +50,21 @@ namespace HeadTracking
 
             if (NullHelper.IsNull(_fpsCameraType)) ModLoader.Log("[GameTypeResolver] vp_FPSCamera type NOT found");
             if (NullHelper.IsNull(_nguiHudType)) ModLoader.Log("[GameTypeResolver] NGUI_HUD type NOT found");
+        }
+
+        private static Type FindTypeByName(string typeName)
+        {
+            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try
+                {
+                    Type type = assembly.GetType(typeName);
+                    if (type != null) return type;
+                }
+                catch (ReflectionTypeLoadException) { }
+                catch (FileNotFoundException) { }
+            }
+            return null;
         }
     }
 }

@@ -35,8 +35,9 @@ CLAUDE.md
 .windsurfrules
 .github/copilot-instructions.md
 
-# Tools (downloaded on demand by ensure-cecil.ps1)
+# Tools (downloaded on demand by ensure-cecil.ps1, compiled by package-release.ps1)
 tools/*.dll
+tools/*.exe
 
 # OS
 .DS_Store
