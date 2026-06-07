@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: true
+          submodules: recursive
 
       - name: Extract version from tag
         id: version
@@ -56,43 +56,15 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Create Unity stub assemblies for CI
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+
+      # Build + package through the SAME command developers and the Build
+      # workflow run. All build-deps come from scripts/create-unity-stubs.ps1
+      # via the pixi task chain - this workflow owns no build logic.
+      - name: Build and package
         shell: pwsh
-        run: |
-          powershell -ExecutionPolicy Bypass -File scripts/create-unity-stubs.ps1 -LibsPath "src/GoneHomeHeadTracking/libs"
-
-      - name: Restore NuGet packages
-        shell: pwsh
-        run: |
-          $unityPath = "${{ github.workspace }}\src\GoneHomeHeadTracking\libs"
-          dotnet restore src/GoneHomeHeadTracking/GoneHomeHeadTracking.csproj "-p:UnityEnginePath=$unityPath"
-
-      - name: Build release
-        shell: pwsh
-        run: |
-          Write-Host "Building release..." -ForegroundColor Cyan
-          $unityPath = "${{ github.workspace }}\src\GoneHomeHeadTracking\libs"
-          dotnet build src/GoneHomeHeadTracking/GoneHomeHeadTracking.csproj --configuration Release "-p:UnityEnginePath=$unityPath"
-
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "::error::Build failed"
-            exit 1
-          }
-
-          Write-Host "Build succeeded" -ForegroundColor Green
-
-      - name: Package release
-        shell: pwsh
-        run: |
-          Write-Host "Packaging release..." -ForegroundColor Cyan
-          powershell -ExecutionPolicy Bypass -File scripts/package-release.ps1
-
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "::error::Packaging failed"
-            exit 1
-          }
-
-          Write-Host "Package created" -ForegroundColor Green
+        run: pixi run package
 
       - name: Generate release notes
         shell: pwsh

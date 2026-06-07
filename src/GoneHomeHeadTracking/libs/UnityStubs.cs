@@ -263,6 +263,7 @@ namespace UnityEngine {
         public static float InverseLerp(float a, float b, float value) => (value - a) / (b - a);
         public static float Sin(float f) => (float)System.Math.Sin(f);
         public static float Cos(float f) => (float)System.Math.Cos(f);
+        public static float Tan(float f) => (float)System.Math.Tan(f);
         public static float Sqrt(float f) => (float)System.Math.Sqrt(f);
         public static float Floor(float f) => (float)System.Math.Floor(f);
         public static float Ceil(float f) => (float)System.Math.Ceiling(f);

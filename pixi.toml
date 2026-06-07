@@ -7,7 +7,7 @@ platforms = ["win-64"]
 
 [tasks]
 sync = "git submodule update --remote cameraunlock-core"
-setup = "powershell -ExecutionPolicy Bypass -File scripts/setup-libs.ps1"
+setup = "powershell -ExecutionPolicy Bypass -File scripts/create-unity-stubs.ps1 -LibsPath src/GoneHomeHeadTracking/libs"
 restore = { cmd = "dotnet restore src/GoneHomeHeadTracking/GoneHomeHeadTracking.csproj", depends-on = ["setup"] }
 build = { cmd = "dotnet build src/GoneHomeHeadTracking/GoneHomeHeadTracking.csproj -c Release", depends-on = ["restore"] }
 install = { cmd = "powershell -ExecutionPolicy Bypass -File scripts/deploy.ps1 Release", depends-on = ["build"] }

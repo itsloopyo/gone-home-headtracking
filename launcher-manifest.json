@@ -1,12 +1,29 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "mod_info": {
     "name": "GoneHomeHeadTracking",
     "version": "0.0.0",
     "game_id": "gone-home"
   },
   "strategy": "MonoCecil",
-  "delivery_mode": "install_cmd",
-  "install_script": "install.cmd",
-  "uninstall_script": "uninstall.cmd"
+  "delivery_mode": "manifest",
+
+  "files": [
+    { "source": "mod/HeadTracking.dll", "target": "GoneHome_Data/Managed/HeadTracking.dll" },
+    { "source": "mod/CameraUnlock.Core.dll", "target": "GoneHome_Data/Managed/CameraUnlock.Core.dll" },
+    { "source": "mod/CameraUnlock.Core.Unity.dll", "target": "GoneHome_Data/Managed/CameraUnlock.Core.Unity.dll" },
+    { "source": "mod/Mono.Cecil.dll", "target": "GoneHome_Data/Managed/Mono.Cecil.dll" }
+  ],
+
+  "patches": [
+    {
+      "target": "GoneHome_Data/Managed/Assembly-CSharp.dll",
+      "tool": "tools/BootstrapPatcher.exe",
+      "args": [ "{input}", "{output}" ],
+      "marker": "HeadTracking_Patched_GoneHome_v4"
+    }
+  ],
+
+  "runtime_requirements": [],
+  "dependencies": []
 }

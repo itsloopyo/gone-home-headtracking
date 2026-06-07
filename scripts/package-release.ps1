@@ -56,6 +56,11 @@ if (-not (Test-Path $patcherSource)) {
     Write-Host "ERROR: Patcher not found: $patcherSource" -ForegroundColor Red
     exit 1
 }
+$patcherMain = Join-Path $scriptDir "patcher\PatcherMain.cs"
+if (-not (Test-Path $patcherMain)) {
+    Write-Host "ERROR: Patcher wrapper not found: $patcherMain" -ForegroundColor Red
+    exit 1
+}
 
 # Create dist directory
 if (-not (Test-Path $distDir)) {
@@ -79,7 +84,7 @@ foreach ($script in @("install.cmd", "uninstall.cmd")) {
 
 # Stamp launcher-manifest.json with the real release version and copy it
 # into the installer ZIP root. The launcher reads this file to decide how
-# to stage the mod (delivery_mode: install_cmd -> shell out to install.cmd).
+# to stage the mod (delivery_mode: manifest -> native deploy).
 $manifestSource = Join-Path $projectRoot "launcher-manifest.json"
 if (-not (Test-Path $manifestSource)) {
     Write-Host "ERROR: launcher-manifest.json not found at repo root ($manifestSource)" -ForegroundColor Red
@@ -117,6 +122,21 @@ Write-Host "  mod/Mono.Cecil.dll" -ForegroundColor Green
 # Copy patcher source
 Copy-Item $patcherSource -Destination $modDestDir -Force
 Write-Host "  mod/BootstrapPatcher.cs" -ForegroundColor Green
+
+$nativeToolsDir = Join-Path $ghStagingDir "tools"
+New-Item -ItemType Directory -Path $nativeToolsDir -Force | Out-Null
+$csc = Join-Path $env:WINDIR "Microsoft.NET\Framework\v4.0.30319\csc.exe"
+if (-not (Test-Path $csc)) {
+    throw "csc.exe not found at $csc"
+}
+$patcherExe = Join-Path $nativeToolsDir "BootstrapPatcher.exe"
+& $csc /nologo /target:exe /out:$patcherExe /reference:$cecilPath $patcherSource $patcherMain
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to compile BootstrapPatcher.exe"
+}
+Copy-Item $cecilPath -Destination $nativeToolsDir -Force
+Write-Host "  tools/BootstrapPatcher.exe" -ForegroundColor Green
+Write-Host "  tools/Mono.Cecil.dll" -ForegroundColor Green
 
 # Copy documentation
 $docFiles = @("README.md", "LICENSE", "CHANGELOG.md", "THIRD-PARTY-NOTICES.txt")
