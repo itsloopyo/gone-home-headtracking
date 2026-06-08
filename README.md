@@ -88,7 +88,7 @@ Two equivalent binding sets - use whichever your keyboard has:
 3. Rotational tracking disabled, positional tracking enabled
 4. Back to normal
 
-`Page Down` / `Ctrl+Shift+H` toggles yaw mode between camera-local (default; head yaw rotates around the camera's current up axis - matches the dying-light-2 and obra-dinn defaults) and horizon-locked world-space yaw (head yaw stays horizontal even when the camera is pitched, but produces a camera arc at extreme head yaw + mouse pitch combinations).
+`Page Down` / `Ctrl+Shift+H` toggles yaw mode between horizon-locked world-space yaw (default; head yaw stays horizontal even when the camera is pitched, but produces a camera arc at extreme head yaw + mouse pitch combinations) and camera-local yaw (head yaw rotates around the camera's current up axis - matches the dying-light-2 and obra-dinn defaults).
 
 The nav-cluster keys are configurable in `HeadTracking.cfg`; the chord set is fixed.
 
@@ -107,8 +107,8 @@ ToggleKey = End
 PositionToggleKey = PageUp
 YawModeKey = PageDown
 
-# Yaw mode: false = camera-local (default), true = horizon-locked world-space
-WorldSpaceYaw = false
+# Yaw mode: true = horizon-locked world-space (default), false = camera-local
+WorldSpaceYaw = true
 
 # Sensitivity (multipliers, 0.1-5.0)
 YawSensitivity = 1.0

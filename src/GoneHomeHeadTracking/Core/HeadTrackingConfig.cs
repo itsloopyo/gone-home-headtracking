@@ -31,9 +31,9 @@ namespace HeadTracking
         public KeyCode PositionToggleKey { get; set; } = KeyCode.PageUp;
         public KeyCode YawModeKey { get; set; } = KeyCode.PageDown;
 
-        // Yaw mode: false = camera-local yaw (default; matches dying-light-2 and obra-dinn),
-        // true = horizon-locked yaw around world up (causes camera arc at extreme head yaw + mouse pitch).
-        public bool WorldSpaceYaw { get; set; } = false;
+        // Yaw mode: true = horizon-locked yaw around world up (default),
+        // false = camera-local yaw (matches dying-light-2 and obra-dinn).
+        public bool WorldSpaceYaw { get; set; } = true;
 
         // Position tracking
         public float PositionSensitivityX { get; set; } = 1.0f;
@@ -184,9 +184,9 @@ namespace HeadTracking
                     "YawModeKey = PageDown\n" +
                     "\n" +
                     "# --- Yaw Mode ---\n" +
-                    "# false = camera-local yaw (default; matches dying-light-2/obra-dinn)\n" +
-                    "# true = horizon-locked yaw around world up (causes camera arc at extreme head yaw + mouse pitch)\n" +
-                    "WorldSpaceYaw = false\n" +
+                    "# true = horizon-locked yaw around world up (default)\n" +
+                    "# false = camera-local yaw (matches dying-light-2/obra-dinn)\n" +
+                    "WorldSpaceYaw = true\n" +
                     "\n" +
                     "# --- Sensitivity ---\n" +
                     "YawSensitivity = 1.0\n" +
