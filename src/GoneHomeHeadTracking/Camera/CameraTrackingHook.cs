@@ -140,13 +140,18 @@ namespace HeadTracking
                 _isInGameplay = CheckInGameplay();
                 _staticIsInGameplay = _isInGameplay;
 
-                bool canTrack = _isInGameplay && _isEnabled &&
+                bool gameStateAllowsTracking = _isInGameplay && _isEnabled;
+                bool canTrack = gameStateAllowsTracking &&
                                 NullHelper.NotNull(_cameraController) && NullHelper.NotNull(_receiver) &&
                                 _receiver.IsReceiving && _camera != null;
 
                 if (!canTrack)
                 {
-                    if (_wasTracking && NullHelper.NotNull(_cameraController))
+                    // Re-arm the auto-recenter only for game-state stops (toggle
+                    // off, leaving gameplay). A tracking-data gap must not re-arm
+                    // it: the user may not be facing the screen when data resumes,
+                    // and the tracker app owns re-acquisition recentering.
+                    if (_wasTracking && !gameStateAllowsTracking && NullHelper.NotNull(_cameraController))
                         _cameraController.NotifyTrackingLost();
                     _wasTracking = false;
                     return;

@@ -158,8 +158,9 @@ namespace HeadTracking
 
         /// <summary>
         /// Re-arms the auto-recenter so the next ApplyTracking call with fresh data
-        /// will recenter automatically. Called when tracking is lost (disconnect,
-        /// toggle off, leaving gameplay) so reconnection feels seamless.
+        /// will recenter automatically. Called only on game-state stops (toggle
+        /// off, leaving gameplay), never on a tracking-data gap, where the user
+        /// may not be facing the screen when data resumes.
         /// </summary>
         public void NotifyTrackingLost()
         {

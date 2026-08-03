@@ -94,6 +94,11 @@ namespace HeadTracking
 
         private void Update()
         {
+            if (_receiver.TryConsumeRecenterRequest())
+            {
+                Recenter();
+            }
+
             // Lazy init aim system after game is loaded
             if (!_aimSystemInitialized && _cameraController != null)
             {
