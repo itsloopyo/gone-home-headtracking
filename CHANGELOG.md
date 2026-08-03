@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.4.0] - 2026-08-03
+
+### Added
+
+- default yaw mode to horizon-locked world-space
+- honor tracker recenter requests; re-arm auto-recenter only on game-state stops
+
+### Fixed
+
+- show full control set in pixi install via shared -Controls
+
 ## [1.3.2] - 2026-06-08
 
 ### Added
