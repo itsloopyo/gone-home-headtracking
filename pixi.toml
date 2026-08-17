@@ -1,6 +1,6 @@
 [workspace]
 name = "gone-home-head-tracking"
-version = "1.4.0"
+version = "1.4.1"
 description = "Head tracking mod for Gone Home with aim decoupling"
 channels = ["conda-forge"]
 platforms = ["win-64"]
