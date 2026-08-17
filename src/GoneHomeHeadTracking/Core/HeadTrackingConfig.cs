@@ -22,8 +22,11 @@ namespace HeadTracking
         public float PitchSensitivity { get; set; } = 1.0f;
         public float RollSensitivity { get; set; } = 1.0f;
 
-        // Smoothing
-        public float Smoothing { get; set; } = 0.15f;
+        // Smoothing. Selected per connection from the tracker's source address:
+        // a tracker on this machine uses LocalSmoothing, a remote network device
+        // uses RemoteSmoothing. Both cover rotation and position.
+        public float LocalSmoothing { get; set; } = 0.0f;
+        public float RemoteSmoothing { get; set; } = 0.15f;
 
         // Hotkeys
         public KeyCode RecenterKey { get; set; } = KeyCode.Home;
@@ -89,9 +92,13 @@ namespace HeadTracking
                             if (ConfigParsingUtils.TryParseFloat(value, out float roll))
                                 config.RollSensitivity = roll;
                             break;
-                        case "smoothing":
-                            if (ConfigParsingUtils.TryParseFloat(value, out float smoothing))
-                                config.Smoothing = Math.Max(0f, Math.Min(1f, smoothing));
+                        case "localsmoothing":
+                            if (ConfigParsingUtils.TryParseFloat(value, out float localSmoothing))
+                                config.LocalSmoothing = Math.Max(0f, Math.Min(1f, localSmoothing));
+                            break;
+                        case "remotesmoothing":
+                            if (ConfigParsingUtils.TryParseFloat(value, out float remoteSmoothing))
+                                config.RemoteSmoothing = Math.Max(0f, Math.Min(1f, remoteSmoothing));
                             break;
                         case "recenterkey":
                             config.RecenterKey = ParseKeyCode(value, config.RecenterKey, "RecenterKey", log);
@@ -194,8 +201,12 @@ namespace HeadTracking
                     "RollSensitivity = 1.0\n" +
                     "\n" +
                     "# --- Smoothing ---\n" +
-                    "# 0.0 = no smoothing, 1.0 = maximum.\n" +
-                    "Smoothing = 0.15\n" +
+                    "# Picked per connection from the tracker's source address. Both values\n" +
+                    "# cover rotation and position. 0.0 = no smoothing, 1.0 = heavy.\n" +
+                    "# LocalSmoothing: tracker running on this machine (loopback).\n" +
+                    "# RemoteSmoothing: tracker on a remote device over the network.\n" +
+                    "LocalSmoothing = 0.0\n" +
+                    "RemoteSmoothing = 0.15\n" +
                     "\n" +
                     "# --- Position Tracking ---\n" +
                     "PositionSensitivityX = 1.0\n" +

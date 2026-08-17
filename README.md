@@ -110,13 +110,17 @@ YawModeKey = PageDown
 # Yaw mode: true = horizon-locked world-space (default), false = camera-local
 WorldSpaceYaw = true
 
-# Sensitivity (multipliers, 0.1-5.0)
+# Sensitivity (multipliers). Not clamped; 0.1-5.0 is the useful range.
 YawSensitivity = 1.0
 PitchSensitivity = 1.0
 RollSensitivity = 1.0
 
-# Smoothing (0.0-1.0). A floor of 0.15 is enforced for remote/wireless trackers.
-Smoothing = 0.15
+# Smoothing (0.0-1.0). Picked per connection from the tracker's source address,
+# and both values cover rotation and position.
+# Tracker running on this machine (loopback)
+LocalSmoothing = 0.0
+# Tracker on a remote device over the network
+RemoteSmoothing = 0.15
 
 # Position tracking
 PositionSensitivityX = 1.0
@@ -145,7 +149,7 @@ ReticleColor = 1.0,1.0,1.0,1.0
 - Press `Home` (or `Ctrl+Shift+T`) to recenter.
 
 **Jittery or unstable tracking:**
-- Raise `Smoothing` in `HeadTracking.cfg` toward `0.3`-`0.5`.
+- Raise `RemoteSmoothing` (phone/network tracker) or `LocalSmoothing` (tracker on this PC) in `HeadTracking.cfg` toward `0.3`-`0.5`.
 - For phone trackers over Wi-Fi, prefer wired USB tethering or a 5 GHz network.
 - Tune the OpenTrack filter (Accela or similar) if you are routing through OpenTrack.
 
