@@ -128,7 +128,7 @@ PositionSensitivityY = 1.0
 PositionSensitivityZ = 1.0
 InvertPositionX = true
 InvertPositionY = false
-InvertPositionZ = true
+InvertTrackerZ = false
 
 # Reticle (R,G,B,A in 0.0-1.0)
 ShowReticle = true
@@ -154,7 +154,7 @@ ReticleColor = 1.0,1.0,1.0,1.0
 - Tune the OpenTrack filter (Accela or similar) if you are routing through OpenTrack.
 
 **Wrong rotation axis or inverted motion:**
-- Flip `InvertPositionX`, `InvertPositionY`, or `InvertPositionZ` in `HeadTracking.cfg`.
+- Flip `InvertPositionX`, `InvertPositionY`, or `InvertTrackerZ` in `HeadTracking.cfg`.
 - For inverted yaw or pitch, use OpenTrack's per-axis "Invert" switches in the Output mapping.
 
 **Yaw feels wrong when looking up or down at extreme angles:**

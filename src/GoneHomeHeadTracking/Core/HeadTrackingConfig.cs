@@ -44,7 +44,11 @@ namespace HeadTracking
         public float PositionSensitivityZ { get; set; } = 1.0f;
         public bool InvertPositionX { get; set; } = true;
         public bool InvertPositionY { get; set; } = false;
-        public bool InvertPositionZ { get; set; } = true;
+        /// Renamed from InvertPositionZ, which every existing HeadTracking.cfg carries as
+        /// true. It used to double as the flip into Unity's +z-forward world space, a job
+        /// cameraunlock-core now does at the engine boundary; left in place it would invert
+        /// the lean. The key has to change so existing files fall back to this default.
+        public bool InvertTrackerZ { get; set; } = false;
 
         // Aim decoupling
         public bool ShowReticle { get; set; } = true;
@@ -136,9 +140,9 @@ namespace HeadTracking
                             if (ConfigParsingUtils.TryParseBool(value, out bool invY))
                                 config.InvertPositionY = invY;
                             break;
-                        case "invertpositionz":
+                        case "inverttrackerz":
                             if (ConfigParsingUtils.TryParseBool(value, out bool invZ))
-                                config.InvertPositionZ = invZ;
+                                config.InvertTrackerZ = invZ;
                             break;
                         case "showreticle":
                             if (ConfigParsingUtils.TryParseBool(value, out bool show))
@@ -214,7 +218,7 @@ namespace HeadTracking
                     "PositionSensitivityZ = 1.0\n" +
                     "InvertPositionX = true\n" +
                     "InvertPositionY = false\n" +
-                    "InvertPositionZ = true\n" +
+                    "InvertTrackerZ = false\n" +
                     "\n" +
                     "# --- Reticle ---\n" +
                     "ShowReticle = true\n" +
