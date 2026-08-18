@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.2] - 2026-08-18
+
+### Fixed
+
+- restore the forward lean budget; InvertPositionZ becomes InvertTrackerZ
+- unblock release notes generation
+
 ## [1.4.1] - 2026-08-18
 
 ### Fixed
