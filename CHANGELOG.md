@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.0] - 2026-08-20
+
+### Added
+
+- remove recentring; the tracker owns the centre
+
 ## [1.4.2] - 2026-08-18
 
 ### Fixed
