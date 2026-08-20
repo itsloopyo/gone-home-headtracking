@@ -17,8 +17,26 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- `HeadTracking_BOOT.log` and `HeadTracking_BOOT_ERROR.log` are now rewritten on
+  every launch instead of being appended to forever, so a log sent in with a bug
+  report only contains the session it describes.
+- A fault inside the per-frame camera hook, the reticle search or the
+  interaction-text positioner is now logged once instead of on every frame, which
+  could previously fill the log at roughly 17 MB per hour.
+
 ### Changed
 
+- Recentring is gone entirely: the `Home` / `Ctrl+Shift+T` hotkey, the
+  `RecenterKey` config entry, and every centre the mod used to capture. Your
+  tracker owns the centre now. Centre it there, with OpenTrack's Center bind or
+  your phone app's own centre button, and the mod applies what it sends.
+
+  Two centres in series was the problem. Each side recentred at moments the
+  other could not see, so when the view was off you could not tell which one was
+  wrong, and switching between trackers meant recentring in both. With one
+  centre there is nothing to disagree about.
 - Smoothing is now two `HeadTracking.cfg` keys instead of one: `LocalSmoothing`
   (default 0.0) applies when the tracker runs on this machine, `RemoteSmoothing`
   (default 0.15) applies when the tracker is a remote device on the network. The

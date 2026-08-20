@@ -1,4 +1,3 @@
-using System;
 using CameraUnlock.Core.Data;
 using CameraUnlock.Core.Math;
 using CameraUnlock.Core.Processing;
@@ -90,16 +89,11 @@ namespace HeadTracking
 
             _isEnabled = true;
 
-            Log($"{ModName} loaded! Port: {_config.UdpPort}, Toggle: {_config.ToggleKey}, Recenter: {_config.RecenterKey}");
+            Log($"{ModName} loaded! Port: {_config.UdpPort}, Toggle: {_config.ToggleKey}");
         }
 
         private void Update()
         {
-            if (_receiver.TryConsumeRecenterRequest())
-            {
-                Recenter();
-            }
-
             // Lazy init aim system after game is loaded
             if (!_aimSystemInitialized && _cameraController != null)
             {
@@ -112,11 +106,6 @@ namespace HeadTracking
             // nav-cluster key, OR the fixed Ctrl+Shift chord.
             if (Input.anyKeyDown)
             {
-                if (ChordHotkeys.IsActionPressed(_config.RecenterKey, ChordHotkeys.RecenterLetter))
-                {
-                    Recenter();
-                }
-
                 if (ChordHotkeys.IsActionPressed(_config.ToggleKey, ChordHotkeys.ToggleLetter))
                 {
                     ToggleTracking();
@@ -246,18 +235,6 @@ namespace HeadTracking
             }
 
             _aimSystemInitialized = true;
-        }
-
-        public void Recenter()
-        {
-            // These components are initialized in Awake() - if null, initialization failed
-            if (_cameraController == null)
-            {
-                throw new InvalidOperationException("Cannot recenter: CameraController not initialized. Mod initialization failed.");
-            }
-
-            _cameraController.Recenter();
-            Log("Recentered");
         }
 
         /// <summary>

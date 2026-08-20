@@ -8,7 +8,7 @@ namespace HeadTracking
     /// Helper component attached to the main camera to apply head tracking at the right time.
     ///
     /// LOOK/AIM DECOUPLING via view matrix:
-    /// Head tracking modifies only camera.worldToCameraMatrix — the camera transform is never touched.
+    /// Head tracking modifies only camera.worldToCameraMatrix - the camera transform is never touched.
     /// - Game logic (FrobManager, interactions) sees the un-tracked transform = AIM
     /// - Rendering sees the modified view matrix = LOOK (where head is pointing)
     /// </summary>
@@ -21,7 +21,7 @@ namespace HeadTracking
         private OpenTrackReceiver _receiver;
         private Camera _camera;
         private bool _isEnabled;
-        private bool _wasTracking;
+        private bool _preCullErrorLogged;
 
         // Gameplay detection - only apply tracking when vp_FPSCamera is active
         private static bool _staticIsInGameplay;
@@ -127,7 +127,7 @@ namespace HeadTracking
         /// Called just before this camera renders.
         ///
         /// LOOK/AIM DECOUPLING via view matrix:
-        /// Head tracking modifies only worldToCameraMatrix — the camera transform stays unchanged.
+        /// Head tracking modifies only worldToCameraMatrix - the camera transform stays unchanged.
         /// Game logic (FrobManager, raycasts) sees the un-tracked transform = AIM direction.
         /// Rendering sees the modified view matrix = LOOK direction (where head is pointing).
         /// No OnPostRender restoration needed.
@@ -147,17 +147,10 @@ namespace HeadTracking
 
                 if (!canTrack)
                 {
-                    // Re-arm the auto-recenter only for game-state stops (toggle
-                    // off, leaving gameplay). A tracking-data gap must not re-arm
-                    // it: the user may not be facing the screen when data resumes,
-                    // and the tracker app owns re-acquisition recentering.
-                    if (_wasTracking && !gameStateAllowsTracking && NullHelper.NotNull(_cameraController))
-                        _cameraController.NotifyTrackingLost();
-                    _wasTracking = false;
                     return;
                 }
 
-                // Apply head tracking via view matrix — transform stays untouched
+                // Apply head tracking via view matrix - transform stays untouched
                 _cameraController.ApplyTracking(_camera);
 
                 // Update aim controller with tracking info
@@ -173,11 +166,16 @@ namespace HeadTracking
                 // Keep trying to hide game reticle until we find it
                 _gameReticleFinder?.TryHideGameReticle();
 
-                _wasTracking = true;
             }
             catch (Exception ex)
             {
-                ModLoader.Log($"[CameraTrackingHook] OnPreCull error: {ex.Message}");
+                // OnPreCull runs every frame, so a recurring fault would otherwise
+                // write ~60 lines/sec into the log the user is asked to send in.
+                if (!_preCullErrorLogged)
+                {
+                    _preCullErrorLogged = true;
+                    ModLoader.Log($"[CameraTrackingHook] OnPreCull error (logged once): {ex}");
+                }
             }
         }
 

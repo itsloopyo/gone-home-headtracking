@@ -47,6 +47,7 @@ This mod uses a Mono.Cecil bootstrap patcher: the mod DLLs are loaded by a small
 2. Configure your tracker (see Webcam or Phone App below).
 3. Set Output to **UDP over network**, host `127.0.0.1`, port `4242`.
 4. Click **Start** to begin tracking.
+5. Centre the view with OpenTrack's **Center** bind while you are looking straight at the screen. The mod keeps no centre of its own, so the tracker's centre is the one that counts.
 
 ### Webcam Setup
 
@@ -62,6 +63,7 @@ If your phone tracking app already smooths its output, you can send directly to 
 2. Find your PC's local IP with `ipconfig` (look for something like `192.168.1.100`).
 3. Configure the phone app to send to that IP on port `4242` using the OpenTrack/UDP protocol.
 4. Start tracking in the app.
+5. Use the app's own centre button while you are looking straight at the screen.
 
 **Optional OpenTrack relay** (for curve mapping or extra smoothing):
 
@@ -76,7 +78,6 @@ Two equivalent binding sets - use whichever your keyboard has:
 
 | Action              | Nav-cluster | Chord           |
 |---------------------|-------------|-----------------|
-| Recenter            | `Home`      | `Ctrl+Shift+T`  |
 | Toggle tracking     | `End`       | `Ctrl+Shift+Y`  |
 | Cycle tracking mode | `Page Up`   | `Ctrl+Shift+G`  |
 | Toggle yaw mode     | `Page Down` | `Ctrl+Shift+H`  |
@@ -102,7 +103,6 @@ UdpPort = 4242
 
 # Keybindings (Unity KeyCode names)
 # See https://docs.unity3d.com/ScriptReference/KeyCode.html
-RecenterKey = Home
 ToggleKey = End
 PositionToggleKey = PageUp
 YawModeKey = PageDown
@@ -137,6 +137,18 @@ ReticleColor = 1.0,1.0,1.0,1.0
 
 ## Troubleshooting
 
+**Where the logs are:**
+- `GoneHome_Data\Managed\HeadTracking.log` is the main mod log. It records the
+  port it listened on, whether the camera hook attached, and an `OpenTrack
+  connected` line the moment the first tracker packet arrives. Send this file
+  when reporting a problem.
+- `GoneHome_Data\Managed\HeadTracking_BOOT.log` records whether the patched
+  game assembly loaded the mod at all.
+- `%TEMP%\HeadTracking_BOOT_ERROR.log` records patch or load failures.
+
+All three are rewritten from scratch on every game launch, so they only ever
+contain the most recent session.
+
 **Mod not loading:**
 - Check `HeadTracking_BOOT.log` in `GoneHome_Data\Managed\`.
 - Check `%TEMP%\HeadTracking_BOOT_ERROR.log` for patch or load errors.
@@ -146,7 +158,9 @@ ReticleColor = 1.0,1.0,1.0,1.0
 - Verify OpenTrack (or your phone app) is running and outputting UDP.
 - Confirm the destination port is `4242` and the host is `127.0.0.1` (or your PC's LAN IP if sending from a phone).
 - Press `End` (or `Ctrl+Shift+Y`) to toggle tracking back on.
-- Press `Home` (or `Ctrl+Shift+T`) to recenter.
+
+**View sits off to one side:**
+- Centre it in your tracker app: OpenTrack's **Center** bind, or the centre button in your phone app. The mod applies what the tracker sends as-is and has no centre of its own.
 
 **Jittery or unstable tracking:**
 - Raise `RemoteSmoothing` (phone/network tracker) or `LocalSmoothing` (tracker on this PC) in `HeadTracking.cfg` toward `0.3`-`0.5`.

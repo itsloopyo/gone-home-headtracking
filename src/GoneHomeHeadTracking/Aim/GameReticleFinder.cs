@@ -10,6 +10,7 @@ namespace HeadTracking
     public sealed class GameReticleFinder
     {
         private MonoBehaviour _hudInstance;
+        private bool _findErrorLogged;
         private GameObject _reticuleGameObject;
         private bool _wasActive;
 
@@ -82,7 +83,13 @@ namespace HeadTracking
             }
             catch (System.Exception ex)
             {
-                ModLoader.Log($"[GameReticleFinder] FindHUDInstance error: {ex.Message}");
+                // Retried twice a second until the HUD appears, so a persistent
+                // fault would otherwise log for the whole session.
+                if (!_findErrorLogged)
+                {
+                    _findErrorLogged = true;
+                    ModLoader.Log($"[GameReticleFinder] FindHUDInstance error (logged once): {ex}");
+                }
             }
         }
 

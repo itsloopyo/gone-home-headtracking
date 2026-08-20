@@ -29,7 +29,6 @@ namespace HeadTracking
         public float RemoteSmoothing { get; set; } = 0.15f;
 
         // Hotkeys
-        public KeyCode RecenterKey { get; set; } = KeyCode.Home;
         public KeyCode ToggleKey { get; set; } = KeyCode.End;
         public KeyCode PositionToggleKey { get; set; } = KeyCode.PageUp;
         public KeyCode YawModeKey { get; set; } = KeyCode.PageDown;
@@ -103,9 +102,6 @@ namespace HeadTracking
                         case "remotesmoothing":
                             if (ConfigParsingUtils.TryParseFloat(value, out float remoteSmoothing))
                                 config.RemoteSmoothing = Math.Max(0f, Math.Min(1f, remoteSmoothing));
-                            break;
-                        case "recenterkey":
-                            config.RecenterKey = ParseKeyCode(value, config.RecenterKey, "RecenterKey", log);
                             break;
                         case "togglekey":
                             config.ToggleKey = ParseKeyCode(value, config.ToggleKey, "ToggleKey", log);
@@ -189,7 +185,6 @@ namespace HeadTracking
                     "\n" +
                     "# --- Keybindings ---\n" +
                     "# See https://docs.unity3d.com/ScriptReference/KeyCode.html for key names\n" +
-                    "RecenterKey = Home\n" +
                     "ToggleKey = End\n" +
                     "PositionToggleKey = PageUp\n" +
                     "YawModeKey = PageDown\n" +

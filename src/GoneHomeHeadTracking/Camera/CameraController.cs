@@ -9,7 +9,7 @@ namespace HeadTracking
     /// <summary>
     /// Applies head tracking rotation to the game camera additively.
     /// Rotation is applied on top of existing mouse/controller look to preserve normal controls.
-    /// Delegates to shared TrackingProcessor (sensitivity, recenter, smoothing, deadzone)
+    /// Delegates to shared TrackingProcessor (sensitivity, smoothing, deadzone)
     /// and PoseInterpolator (inter-sample interpolation).
     /// </summary>
     public sealed class CameraController
@@ -22,7 +22,6 @@ namespace HeadTracking
 
         private Camera _targetCamera;
         private Vec3 _lastPositionOffset;
-        private bool _hasCentered;
 
         // Tracking-only quaternion for aim compensation
         private Quaternion _trackingQuaternion = Quaternion.identity;
@@ -64,19 +63,6 @@ namespace HeadTracking
         }
 
         /// <summary>
-        /// Sets the current head position as the center reference.
-        /// </summary>
-        public void Recenter()
-        {
-            var rawPose = _receiver.GetLatestPose();
-            _processor.RecenterTo(rawPose);
-            _interpolator.Reset();
-            _positionProcessor?.SetCenter(_receiver.GetLatestPosition());
-            _positionInterpolator?.Reset();
-            _lastPositionOffset = Vec3.Zero;
-        }
-
-        /// <summary>
         /// Applies head tracking rotation to the specified camera.
         /// Called by CameraTrackingHook.OnPreCull() with the hook's camera.
         /// </summary>
@@ -84,15 +70,6 @@ namespace HeadTracking
         {
             if (camera == null) return;
             _targetCamera = camera;
-
-            // Auto-recenter once real tracker data arrives so the user's startup position is neutral.
-            // Wait for fresh data — on the very first frame the receiver may not have packets yet.
-            if (!_hasCentered)
-            {
-                if (!_receiver.IsDataFresh()) return;
-                _hasCentered = true;
-                Recenter();
-            }
 
             // Get raw tracking data, interpolate between samples, then process
             var rawPose = _receiver.GetLatestPose();
@@ -117,7 +94,7 @@ namespace HeadTracking
 
             if (RotationEnabled)
             {
-                // Apply rotation via view matrix — never touch camera.transform.
+                // Apply rotation via view matrix - never touch camera.transform.
                 // Pitch negated to match Euler convention (positive pitch = look up).
                 if (WorldSpaceYaw)
                 {
@@ -158,17 +135,6 @@ namespace HeadTracking
                 vm.m23 -= viewSpaceOffset.z;
                 camera.worldToCameraMatrix = vm;
             }
-        }
-
-        /// <summary>
-        /// Re-arms the auto-recenter so the next ApplyTracking call with fresh data
-        /// will recenter automatically. Called only on game-state stops (toggle
-        /// off, leaving gameplay), never on a tracking-data gap, where the user
-        /// may not be facing the screen when data resumes.
-        /// </summary>
-        public void NotifyTrackingLost()
-        {
-            _hasCentered = false;
         }
 
         public void ResetCamera()

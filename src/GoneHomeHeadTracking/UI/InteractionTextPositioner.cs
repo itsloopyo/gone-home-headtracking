@@ -22,6 +22,7 @@ namespace HeadTracking
         // State
         private bool _elementsSearched;
         private bool _initialized;
+        private bool _findErrorLogged;
 
         /// <summary>
         /// Updates the position of interaction UI elements based on the aim offset.
@@ -105,7 +106,13 @@ namespace HeadTracking
             }
             catch (System.Exception ex)
             {
-                ModLoader.Log($"[InteractionTextPositioner] FindUIElements error: {ex.Message}");
+                // The retry below re-runs this every frame, so a persistent fault
+                // would otherwise log at frame rate.
+                if (!_findErrorLogged)
+                {
+                    _findErrorLogged = true;
+                    ModLoader.Log($"[InteractionTextPositioner] FindUIElements error (logged once): {ex}");
+                }
                 _elementsSearched = false; // Retry on error
             }
         }
