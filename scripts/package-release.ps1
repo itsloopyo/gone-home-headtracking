@@ -138,16 +138,17 @@ Copy-Item $cecilPath -Destination $nativeToolsDir -Force
 Write-Host "  tools/BootstrapPatcher.exe" -ForegroundColor Green
 Write-Host "  tools/Mono.Cecil.dll" -ForegroundColor Green
 
-# Copy documentation
-$docFiles = @("README.md", "LICENSE", "CHANGELOG.md", "THIRD-PARTY-NOTICES.txt")
+# Copy documentation. The installer ZIP is a binary distribution: MIT requires
+# the copyright notice and disclaimer of everything we bundle or link to travel
+# with it, so a missing notice file fails the build instead of shipping quietly.
+$docFiles = @("README.md", "LICENSE", "CHANGELOG.md", "THIRD-PARTY-NOTICES.md")
 foreach ($doc in $docFiles) {
     $docPath = Join-Path $projectRoot $doc
-    if (Test-Path $docPath) {
-        Copy-Item $docPath -Destination $ghStagingDir -Force
-        Write-Host "  $doc" -ForegroundColor Green
-    } elseif ($doc -eq "LICENSE") {
-        Write-Host "  WARNING: $doc not found" -ForegroundColor Yellow
+    if (-not (Test-Path $docPath)) {
+        throw "Required documentation file not found: $doc. Every published ZIP is a binary distribution and must carry it."
     }
+    Copy-Item $docPath -Destination $ghStagingDir -Force
+    Write-Host "  $doc" -ForegroundColor Green
 }
 
 Copy-SharedBundle -StagingDir $ghStagingDir
@@ -195,6 +196,17 @@ if (Test-Path $nexusZipPath) { Remove-Item $nexusZipPath -Force }
 Write-Host ""
 Write-Host "Creating Nexus ZIP..." -ForegroundColor Cyan
 
+# The Nexus ZIP is a binary distribution too: the licences of everything
+# compiled into or bundled with the payload require their notices to travel
+# with it, so LICENSE and THIRD-PARTY-NOTICES.md ship at its root.
+foreach ($noticeDoc in @('LICENSE', 'THIRD-PARTY-NOTICES.md', 'README.md')) {
+    $noticeSrc = Join-Path $projectRoot $noticeDoc
+    if (-not (Test-Path $noticeSrc)) {
+        throw "Required notice file not found: $noticeDoc. Every published ZIP is a binary distribution and must carry it."
+    }
+    Copy-Item $noticeSrc -Destination $nexusStagingDir -Force
+    Write-Host "  $noticeDoc" -ForegroundColor Green
+}
 Push-Location $nexusStagingDir
 try {
     Compress-Archive -Path ".\*" -DestinationPath $nexusZipPath -Force

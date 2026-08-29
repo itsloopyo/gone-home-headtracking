@@ -1,8 +1,10 @@
 # Gone Home Head Tracking
 
-An unofficial head tracking mod for Gone Home that lets you look around the Greenbriar house with your head while keeping the mouse free for cursor control and interaction, no VR headset required.
+![Gone Home running with this mod](https://raw.githubusercontent.com/itsloopyo/gone-home-headtracking/main/assets/readme-clip.gif)
 
-![Mod GIF](https://raw.githubusercontent.com/itsloopyo/gone-home-headtracking/main/assets/readme-clip.gif)
+*Recorded in Gone Home with this mod running. Gone Home is the property of [The Fullbright Company](https://fullbright.company/); the footage is shown here to demonstrate the mod and is not covered by this project's licence.*
+
+An unofficial head tracking mod for Gone Home that moves the view with your head while your mouse keeps control of the cursor, driven by a webcam, phone, or any OpenTrack compatible tracker, with no VR headset required.
 
 ## Features
 
@@ -34,7 +36,7 @@ For users who prefer to place files by hand (advanced).
 
 This mod uses a Mono.Cecil bootstrap patcher: the mod DLLs are loaded by a small instruction injected into `Assembly-CSharp.dll`. There is no separate mod loader to install, but `Assembly-CSharp.dll` must be patched once.
 
-1. Download the Nexus ZIP from the [Releases page](https://github.com/itsloopyo/gone-home-headtracking/releases) and extract it into your Gone Home install folder. This places `HeadTracking.dll`, `CameraUnlock.Core.dll`, `CameraUnlock.Core.Unity.dll`, and `Mono.Cecil.dll` into `GoneHome_Data\Managed\`.
+1. Download the Nexus ZIP from the [Releases page](https://github.com/itsloopyo/gone-home-headtracking/releases) and extract it into your Gone Home install folder. This places `HeadTracking.dll`, `CameraUnlock.Core.dll` and `CameraUnlock.Core.Unity.dll` into `GoneHome_Data\Managed\`. `Mono.Cecil.dll` is only needed by the patcher and ships in the installer ZIP.
 2. Patch `Assembly-CSharp.dll` by running `install.cmd` from the installer ZIP with your game path:
    ```
    install.cmd "C:\Path\To\Gone Home"
@@ -219,8 +221,23 @@ Other tasks: `pixi run uninstall`, `pixi run package`, `pixi run clean`, `pixi r
 
 MIT License. See [LICENSE](LICENSE) for details.
 
+The MIT licence covers the code, scripts and documentation in this repository. It does not extend to the Gone Home footage in `assets/`, or to any trademark. See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
 ## Credits
 
 - [The Fullbright Company](https://fullbright.company/) for Gone Home.
 - [OpenTrack](https://github.com/opentrack/opentrack) for the head tracking protocol and tooling.
 - [Mono.Cecil](https://github.com/jbevain/cecil) for runtime assembly patching.
+
+## Disclaimer
+
+This is an unofficial, fan-made modification. It is not affiliated with,
+endorsed by, or sponsored by The Fullbright Company or any other rights holder,
+and it requires a legitimately purchased copy of Gone Home. It contains no game
+code, no extracted game assets and no game data files, aside from the demo clip
+above: the mod is loaded by patching a copy of
+`Assembly-CSharp.dll` on your own machine at install time, and the original is
+kept as `Assembly-CSharp.dll.original` so `uninstall.cmd` can put it back.
+Product names and trademarks are used only to identify the game this mod
+applies to. If you hold rights in anything shown here and would rather it were
+not published, open an issue or reach us on Discord and it comes down.

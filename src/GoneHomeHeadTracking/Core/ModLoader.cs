@@ -112,7 +112,7 @@ namespace HeadTracking
                 throw new InvalidOperationException("Cannot log: _logPath not initialized. Call SetupLogging() first.");
             }
 
-            // Write timestamp directly to buffer — avoids DateTime.ToString() string allocation
+            // Write timestamp directly to buffer - avoids DateTime.ToString() string allocation
             DateTime now = DateTime.Now;
             _logBuffer.Append('[');
             AppendTwoDigit(_logBuffer, now.Hour);

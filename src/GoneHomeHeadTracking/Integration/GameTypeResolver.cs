@@ -13,10 +13,10 @@ namespace HeadTracking
     {
         private static bool _searched;
 
-        // vp_FPSCamera — used by CameraTrackingHook for gameplay detection
+        // vp_FPSCamera - used by CameraTrackingHook for gameplay detection
         private static Type _fpsCameraType;
 
-        // NGUI_HUD — used by GameReticleFinder and InteractionTextPositioner
+        // NGUI_HUD - used by GameReticleFinder and InteractionTextPositioner
         private static Type _nguiHudType;
         private static FieldInfo _reticuleSpriteField;
         private static PropertyInfo _nguiHudInstanceProperty;
