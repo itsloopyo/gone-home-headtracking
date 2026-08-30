@@ -4,7 +4,7 @@
 
 *Recorded in Gone Home with this mod running. Gone Home is the property of [The Fullbright Company](https://fullbright.company/); the footage is shown here to demonstrate the mod and is not covered by this project's licence.*
 
-An unofficial head tracking mod for Gone Home that moves the view with your head while your mouse keeps control of the cursor, driven by a webcam, phone, or any OpenTrack compatible tracker, with no VR headset required.
+An unofficial head tracking mod for Gone Home that moves the view with your head while your mouse keeps control of the cursor, driven by OpenTrack over UDP, with no VR headset required.
 
 ## Features
 
@@ -45,34 +45,64 @@ This mod uses a Mono.Cecil bootstrap patcher: the mod DLLs are loaded by a small
 
 ## Setting Up OpenTrack
 
-1. Download and install [OpenTrack](https://github.com/opentrack/opentrack/releases).
-2. Configure your tracker (see Webcam or Phone App below).
-3. Set Output to **UDP over network**, host `127.0.0.1`, port `4242`.
-4. Click **Start** to begin tracking.
-5. Centre the view with OpenTrack's **Center** bind while you are looking straight at the screen. The mod keeps no centre of its own, so the tracker's centre is the one that counts.
+The mod listens for OpenTrack pose data on UDP port `4242`, on every network
+interface. One datagram is six little-endian 64-bit floats in the order
+`x, y, z, yaw, pitch, roll`: position in centimetres, rotation in degrees, 48
+bytes in total. Anything that sends that to that port drives the view.
+OpenTrack's **UDP over network** output sends exactly this, and the steps below
+set it up.
 
-### Webcam Setup
+1. Install [OpenTrack](https://github.com/opentrack/opentrack/releases).
+2. Pick a tracker under **Input**, using the notes below.
+3. Set **Output** to **UDP over network**, host `127.0.0.1`, port `4242`.
+4. Press **Start**. Tracking and the game can start in either order.
 
-1. In OpenTrack, set Input to **neuralnet tracker**.
-2. Position the webcam roughly at face height.
-3. Tune the neuralnet tracker's smoothing and deadzone in OpenTrack's filter settings if the signal is noisy.
+### Webcam
 
-### Phone App Setup
+OpenTrack ships a `neuralnet tracker` input that reads a plain webcam. Select it
+under **Input**, pick your camera in its settings, and use the output settings
+above. How well it tracks depends on your camera and your lighting, so try it
+before buying anything.
 
-If your phone tracking app already smooths its output, you can send directly to the mod on UDP `4242` without running OpenTrack on PC.
+### Phone
 
-1. Install an OpenTrack-compatible head tracking app from your phone's app store.
-2. Find your PC's local IP with `ipconfig` (look for something like `192.168.1.100`).
-3. Configure the phone app to send to that IP on port `4242` using the OpenTrack/UDP protocol.
-4. Start tracking in the app.
-5. Use the app's own centre button while you are looking straight at the screen.
+A phone app can reach the mod directly, with no OpenTrack on the PC, if it sends
+the datagram described above. Point it at this PC's IP address (run `ipconfig`
+to find it) on port `4242`. Not every phone tracker speaks this protocol, so
+check yours for an OpenTrack or UDP output option first. [Headcam](https://headcam.app)
+sends it, and I wrote it so decent tracking is free for anyone who already owns
+a phone.
 
-**Optional OpenTrack relay** (for curve mapping or extra smoothing):
+Sending direct works when the app filters its own signal on the device. The
+mod's smoothing is sized to take the edge off a clean signal rather than to
+rescue a noisy one, so a raw feed sent direct will jitter. If it does, point the
+app at OpenTrack's **UDP over network** *input* on some other port, say 5252,
+and let OpenTrack's filters and curves clean it up before its output forwards to
+`127.0.0.1:4242`.
 
-1. In OpenTrack, set Input to **UDP over network** on port `5252` (any port other than 4242).
-2. Set Output to **UDP over network** at `127.0.0.1:4242`.
-3. In the phone app, send to your PC's IP on port `5252`.
-4. Allow inbound UDP on port `5252` in the Windows firewall.
+Anything arriving from outside `127.0.0.0/8` counts as a remote connection and
+is smoothed with `RemoteSmoothing` rather than `LocalSmoothing`. That includes a
+tracker on this very PC that sends to the machine's own LAN address, because the
+mod reads the source address and not the machine.
+
+### Headset or other hardware
+
+If your device has an OpenTrack input driver, select it under **Input** and use
+the same output settings. OpenTrack's own **Input** list is the authority on
+what it can read; the mod only ever sees what OpenTrack sends.
+
+### Centring
+
+Centring belongs to your tracker. The mod subtracts no centre of its own: it
+applies the pose it receives exactly as it arrives, so a stream of zeros holds
+the view where the game itself puts it. Press the centre control in your tracker
+(OpenTrack's **Center** bind, or the CENTER button in Headcam) and the tracker
+zeroes its own output, which leaves the view centred with the mod doing nothing.
+
+That is why there is no centre hotkey here and nothing to re-centre in game. Two
+centres in series would drift apart, because each side re-centres at moments the
+other cannot see, and you would end up pressing twice to centre once. If the
+view sits off to one side, centre it in the tracker.
 
 ## Controls
 
