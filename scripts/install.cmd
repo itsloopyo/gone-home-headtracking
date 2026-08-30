@@ -2,10 +2,11 @@
 :: ============================================
 :: Gone Home Head Tracking - Install
 :: ============================================
-:: Mono.Cecil patcher for Gone Home (Unity Mono).
-:: Thin wrapper - the install body lives in cameraunlock-core and is
-:: bundled into the release zip's shared/ folder by Copy-SharedBundle.
-:: To change install behaviour edit the body, not this wrapper.
+:: Thin wrapper - install body lives in cameraunlock-core/scripts/install-body-cecil.cmd,
+:: staged into the release ZIP's shared/ by Copy-SharedBundle. To change
+:: install behaviour edit the body, not this wrapper. Everything below the
+:: CONFIG BLOCK is copied verbatim from
+:: cameraunlock-core/scripts/templates/install-wrapper-cecil.cmd.
 :: ============================================
 
 :: --- CONFIG BLOCK ---
@@ -23,11 +24,7 @@ set "PATCH_MARKER=HeadTracking_Patched_GoneHome_v4"
 set "MOD_CONTROLS=Controls:&echo   End     - Toggle head tracking on/off&echo   PgUp    - Cycle tracking mode (full / rotation only / position only)&echo   PgDn    - Toggle yaw mode (horizon-locked / camera-local)"
 :: --- END CONFIG BLOCK ---
 
-:: WRAPPER_DIR is what the body uses to resolve sibling files (mod/,
-:: shared/find-game.ps1) - its own %~dp0 inside the body file would point
-:: at the body's location, which is wrong in both release and dev.
 set "WRAPPER_DIR=%~dp0"
-
 set "_BODY=%WRAPPER_DIR%shared\install-body-cecil.cmd"
 if not exist "%_BODY%" set "_BODY=%WRAPPER_DIR%..\cameraunlock-core\scripts\install-body-cecil.cmd"
 if not exist "%_BODY%" (

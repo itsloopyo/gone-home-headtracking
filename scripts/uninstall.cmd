@@ -2,9 +2,11 @@
 :: ============================================
 :: Gone Home Head Tracking - Uninstall
 :: ============================================
-:: Thin wrapper - the uninstall body lives in cameraunlock-core and is
-:: bundled into the release zip's shared/ folder by Copy-SharedBundle.
-:: To change uninstall behaviour edit the body, not this wrapper.
+:: Thin wrapper - uninstall body lives in cameraunlock-core/scripts/uninstall-body.cmd,
+:: staged into the release ZIP's shared/ by Copy-SharedBundle. To change
+:: uninstall behaviour edit the body, not this wrapper. Everything below the
+:: CONFIG BLOCK is copied verbatim from
+:: cameraunlock-core/scripts/templates/uninstall-wrapper.cmd.
 :: ============================================
 
 :: --- CONFIG BLOCK ---
@@ -15,23 +17,15 @@ set "MOD_INTERNAL_NAME=GoneHomeHeadTracking"
 set "STATE_FILE=.headtracking-state.json"
 set "FRAMEWORK_TYPE=MonoCecil"
 set "LEGACY_DLLS="
-
-:: --- Loader-specific config (leave the ones that don't apply blank) ---
-:: MonoCecil: used to find + restore the original Assembly-CSharp.dll.
+set "PLUGIN_SUBFOLDER="
 set "MANAGED_SUBFOLDER=GoneHome_Data\Managed"
 set "ASSEMBLY_DLL=Assembly-CSharp.dll"
-:: MonoCecil: marker the patcher injects; guards against capturing/restoring a
-:: patched Assembly-CSharp.dll as the pristine .original backup.
 set "PATCH_MARKER=HeadTracking_Patched_GoneHome_v4"
-:: MonoCecil: extra files to also remove from MANAGED_SUBFOLDER (config/log
-:: files left behind by the mod itself).
 set "MANAGED_EXTRAS=HeadTracking.cfg HeadTracking.log HeadTracking_BOOT.log HeadTracking.manifest.json"
-:: ASILoader: filename the ASI DLL was renamed to. Defaults to winmm.dll.
 set "ASI_LOADER_NAME=winmm.dll"
 :: --- END CONFIG BLOCK ---
 
 set "WRAPPER_DIR=%~dp0"
-
 set "_BODY=%WRAPPER_DIR%shared\uninstall-body.cmd"
 if not exist "%_BODY%" set "_BODY=%WRAPPER_DIR%..\cameraunlock-core\scripts\uninstall-body.cmd"
 if not exist "%_BODY%" (
