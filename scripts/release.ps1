@@ -58,6 +58,7 @@ $csprojPath = Join-Path $projectDir "src\GoneHomeHeadTracking\GoneHomeHeadTracki
 $modSourcePath = Join-Path $projectDir "src\GoneHomeHeadTracking\Core\HeadTrackingMod.cs"
 $pixiTomlPath = Join-Path $projectDir "pixi.toml"
 $changelogPath = Join-Path $projectDir "CHANGELOG.md"
+$installCmdPath = Join-Path $projectDir "scripts\install.cmd"
 
 Import-Module (Join-Path $projectDir "cameraunlock-core\powershell\ReleaseWorkflow.psm1") -Force
 
@@ -179,6 +180,14 @@ $pixiContent = $pixiContent -replace '(?m)^version\s*=\s*"[^"]+"', "version = `"
 $pixiContent | Set-Content $pixiTomlPath -NoNewline
 Write-Host "  Updated pixi.toml" -ForegroundColor Gray
 
+# install.cmd's MOD_VERSION is what the install writes into the launcher's
+# state file, which is where the launcher looks to spot a stale install.
+$installCmdContent = Get-Content $installCmdPath -Raw
+if ($installCmdContent -notmatch 'set "MOD_VERSION=[^"]+"') { throw "MOD_VERSION line not found in $installCmdPath" }
+$installCmdContent = $installCmdContent -replace 'set "MOD_VERSION=[^"]+"', "set `"MOD_VERSION=$Version`""
+$installCmdContent | Set-Content $installCmdPath -NoNewline
+Write-Host "  Updated install.cmd" -ForegroundColor Gray
+
 # --- Step 5: Release build via pixi ---
 Write-Host "Building release..." -ForegroundColor Cyan
 Push-Location $projectDir
@@ -197,6 +206,7 @@ Write-Host "Committing changes..." -ForegroundColor Cyan
 git add $csprojPath
 git add $modSourcePath
 git add $pixiTomlPath
+git add $installCmdPath
 git add $changelogPath
 git commit -m "Release v$Version"
 if ($LASTEXITCODE -ne 0) {
