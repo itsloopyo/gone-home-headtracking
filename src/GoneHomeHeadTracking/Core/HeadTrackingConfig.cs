@@ -25,8 +25,8 @@ namespace HeadTracking
         // Smoothing. Selected per connection from the tracker's source address:
         // a tracker on this machine uses LocalSmoothing, a remote network device
         // uses RemoteSmoothing. Both cover rotation and position.
-        public float LocalSmoothing { get; set; } = 0.0f;
-        public float RemoteSmoothing { get; set; } = 0.15f;
+        public float LocalSmoothing { get; set; } = CameraUnlock.Core.Math.SmoothingUtils.DefaultLocalSmoothing;
+        public float RemoteSmoothing { get; set; } = CameraUnlock.Core.Math.SmoothingUtils.DefaultRemoteSmoothing;
 
         // Hotkeys
         public KeyCode ToggleKey { get; set; } = KeyCode.End;
