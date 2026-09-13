@@ -10,6 +10,7 @@ An unofficial head tracking mod for Gone Home that moves the view with your head
 
 - **Decoupled look and aim**: Your head moves the view; the mouse still controls the interaction cursor.
 - **6DOF head tracking**: Yaw, pitch, roll, and positional tracking (X/Y/Z) over the OpenTrack UDP protocol.
+- **Works with any OpenTrack compatible tracker** - free options available for PC, iOS and Android
 
 ## Requirements
 
@@ -18,6 +19,13 @@ An unofficial head tracking mod for Gone Home that moves the view with your head
 - Windows 10 or 11 (64-bit).
 
 ## Installation
+
+### Lopari
+
+Download [Lopari](https://lopari.app), choose **Gone Home**, and click
+**Play with head tracking**.
+
+### Standalone Installer
 
 1. Download the latest installer ZIP from the [Releases page](https://github.com/itsloopyo/gone-home-headtracking/releases).
 2. Extract the ZIP anywhere.
