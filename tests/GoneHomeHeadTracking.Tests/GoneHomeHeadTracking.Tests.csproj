@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- net48, because xunit does not run on the mod's net35. The net35 Unity stubs load in it
+         unchanged. -->
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyName>GoneHomeHeadTracking.Tests</AssemblyName>
+    <RootNamespace>HeadTracking.Tests</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- CS0436: tests/config_differential/oracle/ConfigParsingUtils.cs is core's file as v1.5.0
+         pinned it, byte for byte, and it takes precedence over the current core's class of the
+         same name, which is the point of carrying it. -->
+    <NoWarn>$(NoWarn);CS0436</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\cameraunlock-core\csharp\src\CameraUnlock.Core\CameraUnlock.Core.csproj" />
+  </ItemGroup>
+
+  <!-- The Unity stubs `pixi run setup` stages for the mod, for KeyCode and Color. -->
+  <ItemGroup>
+    <Reference Include="UnityEngine">
+      <HintPath>..\..\src\GoneHomeHeadTracking\libs\UnityEngine.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <!-- The mod's Unity-free config sources, compiled in rather than referenced: a reference to the
+       mod would pull CameraUnlock.Core.Unity into this net48 host. -->
+  <ItemGroup>
+    <Compile Include="..\..\src\GoneHomeHeadTracking\Legacy\*.cs" Link="Legacy\%(Filename)%(Extension)" />
+    <Compile Include="..\config_differential\**\*.cs" Link="config_differential\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\..\cameraunlock-core\csharp\testing\IniMutations.cs" Link="IniMutations.cs" />
+  </ItemGroup>
+</Project>

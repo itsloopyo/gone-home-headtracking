@@ -1,0 +1,53 @@
+# What the differential test compares, and where each file came from.
+# Columns: role, source (tag:path, a release asset, or the path in this repo), sha256 of the bytes.
+# v1.5.0 is the newest published release; there is no dev pre-release. Its reader is
+# src/GoneHomeHeadTracking/Core/HeadTrackingConfig.cs, which calls core's ConfigParsingUtils at
+# the pin v1.5.0 recorded, cameraunlock-core 34656598. The oracle compiles both files byte for
+# byte. They also use MathUtils.Clamp01 and OpenTrackReceiver.DefaultPort, taken from the current
+# core: Clamp01's body and DefaultPort = 4242 are the same at 34656598.
+# The frozen reader in src/GoneHomeHeadTracking/Legacy is v1.5.0's LoadFromFile restructured to
+# fill LegacyConfig and write nothing, over a copy of those ConfigParsingUtils methods, so
+# comparison 1 is not empty by construction and runs on every input.
+published reader	v1.5.0:src/GoneHomeHeadTracking/Core/HeadTrackingConfig.cs	848f656a8db766e86ce0da3f22715a1feae3189b379d04c4c083548ad8b68c10
+oracle copy	tests/config_differential/oracle/HeadTrackingConfig.cs	848f656a8db766e86ce0da3f22715a1feae3189b379d04c4c083548ad8b68c10
+published core source	cameraunlock-core 34656598:csharp/src/CameraUnlock.Core/Config/ConfigParsingUtils.cs	b098db76c2f8d85cc5010487ee6cd3cc7ab348c914fa0d87d2d155ba8df6e112
+oracle copy	tests/config_differential/oracle/ConfigParsingUtils.cs	b098db76c2f8d85cc5010487ee6cd3cc7ab348c914fa0d87d2d155ba8df6e112
+frozen from	a8504a6:src/GoneHomeHeadTracking/Core/HeadTrackingConfig.cs	88574fd37edb0677c03ab8f06b72b4cc194cc617db480a64b5097150329830ce
+frozen reader	src/GoneHomeHeadTracking/Legacy/LegacyConfig.cs	165d1dcac4875ca0d34d8a1e5fa47f9a9ed075670411ed61a3e89412c4e41887
+frozen reader	src/GoneHomeHeadTracking/Legacy/LegacyConfigReader.cs	131bbfded75921403b3b804925f4e537a35a7adc0c43080011d4cad70dd28a88
+frozen reader	src/GoneHomeHeadTracking/Legacy/LegacyIniParsing.cs	e82991259b7d2dfbaa04f58ca6a664fb071aaab66749ab38d1d5e0117e625835
+frozen reader	src/GoneHomeHeadTracking/Legacy/LegacyConfigKeys.cs	028b3aa49b21da7684f7a9025f20be108d0f5106cad299dd4db63f35fef06a43
+# No published build shipped HeadTracking.cfg, in a ZIP or as a launcher-manifest.json seed, so the
+# inputs are what each build writes at its first start. A first-run file is the HeadTracking.cfg
+# that build's own HeadTracking.dll, taken from its release ZIP, writes when
+# HeadTrackingConfig.LoadFromFile runs on a path with no file: the published binary, with the
+# CameraUnlock.Core.dll from the same ZIP and the Unity stubs of pixi run setup, run once under
+# Windows PowerShell 5.1 (.NET Framework 4.8). v1.1.0 and v1.4.1 were tagged and never released.
+input source	release v1.0.0 GoneHomeHeadTracking-v1.0.0.zip mod/HeadTracking.dll db93f2fedf2e42f81aea300c102ff86123096119d8eaf9c462efd4adbfbb9ce6	-
+input	tests/config_differential/data/first-run/v1.0.0.cfg	c898907809aed0efaf96d94f4d6e0ba7360499aa5c20b52969181b1277eecc5f
+input source	release v1.0.1 GoneHomeHeadTracking-v1.0.1.zip mod/HeadTracking.dll dda1dfc6a42a4dd04343747b51b99b7446bf3329c641631cdc408c36ec45e894	-
+input	tests/config_differential/data/first-run/v1.0.1.cfg	638cb70b92a28477271673c3b2243aa06156d00c27e413192d3f0a790280d6b6
+input source	release v1.0.2 GoneHomeHeadTracking-v1.0.2-installer.zip mod/HeadTracking.dll a2d3091ec7e44af2062f0516f111580e6cf09dcdd518ca2f5e07a0b22559e7c7	-
+input	tests/config_differential/data/first-run/v1.0.2.cfg	638cb70b92a28477271673c3b2243aa06156d00c27e413192d3f0a790280d6b6
+input source	release v1.0.3 GoneHomeHeadTracking-v1.0.3-installer.zip mod/HeadTracking.dll 4d9da2998e34335cb4f8f88854498ae2d88b71cda818140998048d1a23bfb553	-
+input	tests/config_differential/data/first-run/v1.0.3.cfg	638cb70b92a28477271673c3b2243aa06156d00c27e413192d3f0a790280d6b6
+input source	release v1.0.4 GoneHomeHeadTracking-v1.0.4-installer.zip mod/HeadTracking.dll d8e483e41a796b20c7606050694b95d9b590c33f4a252b8d640e5af81c61b236	-
+input	tests/config_differential/data/first-run/v1.0.4.cfg	058de3fca4bd9181bb0a109d9b5ba3ba5442561a4e9c30c1482e4bad10a22fc8
+input source	release v1.0.5 GoneHomeHeadTracking-v1.0.5-installer.zip mod/HeadTracking.dll 136e1b597e64de65340ea4059270005aeff531f9a0ec1e068e41ca6efcee9f9f	-
+input	tests/config_differential/data/first-run/v1.0.5.cfg	058de3fca4bd9181bb0a109d9b5ba3ba5442561a4e9c30c1482e4bad10a22fc8
+input source	release v1.0.6 GoneHomeHeadTracking-v1.0.6-installer.zip mod/HeadTracking.dll 5ea8438f73d287449158fff49c8afe1233655011cdb4acff80442eb9b153c2f9	-
+input	tests/config_differential/data/first-run/v1.0.6.cfg	058de3fca4bd9181bb0a109d9b5ba3ba5442561a4e9c30c1482e4bad10a22fc8
+input source	release v1.2.0 GoneHomeHeadTracking-v1.2.0-installer.zip mod/HeadTracking.dll dbe09c194a81788cce155df332a557fdb5413ffc76fd0d5550c9d884e48da6ce	-
+input	tests/config_differential/data/first-run/v1.2.0.cfg	058de3fca4bd9181bb0a109d9b5ba3ba5442561a4e9c30c1482e4bad10a22fc8
+input source	release v1.3.0 GoneHomeHeadTracking-v1.3.0-installer.zip mod/HeadTracking.dll 37c040f089e0d9be7f751bfcbb0a8a1b006425c59eae97a611701e2eceef37fc	-
+input	tests/config_differential/data/first-run/v1.3.0.cfg	a392f75a44c33c3ec5e8aeb46b1b744666192a718de7b9f8491f9a5c19aa687e
+input source	release v1.3.1 GoneHomeHeadTracking-v1.3.1-installer.zip mod/HeadTracking.dll f5c3a0c9a0a823dc7e4dbaf83ec35c758c7a5748b4ca82fd67f465287360d471	-
+input	tests/config_differential/data/first-run/v1.3.1.cfg	a392f75a44c33c3ec5e8aeb46b1b744666192a718de7b9f8491f9a5c19aa687e
+input source	release v1.3.2 GoneHomeHeadTracking-v1.3.2-installer.zip mod/HeadTracking.dll 13196c4d52cc134d233b4c4157a630c5b01747f0c73dc8d72eb1652a4591bf87	-
+input	tests/config_differential/data/first-run/v1.3.2.cfg	a392f75a44c33c3ec5e8aeb46b1b744666192a718de7b9f8491f9a5c19aa687e
+input source	release v1.4.0 GoneHomeHeadTracking-v1.4.0-installer.zip mod/HeadTracking.dll a76b93e403003be453e54160f937a113357247d51b6da5ba0097a485a27a992b	-
+input	tests/config_differential/data/first-run/v1.4.0.cfg	6d780fa37677c9c19d9d7b909266e09c43b2e531090e153e0e3a64dedde5edc8
+input source	release v1.4.2 GoneHomeHeadTracking-v1.4.2-installer.zip mod/HeadTracking.dll af6864d7b2e1d6ebbe261aa81011431f6f5a91dbc1894e0a3d45114e6ea843a7	-
+input	tests/config_differential/data/first-run/v1.4.2.cfg	ef8249b8013950e9746d71344850ffa580f3f6bea13d7e68223a0dde1e680036
+input source	release v1.5.0 GoneHomeHeadTracking-v1.5.0-installer.zip mod/HeadTracking.dll ea067685da37bc0d01e8f76627613e515d2f735a92c14ede01234c47c5832e35	-
+input	tests/config_differential/data/first-run/v1.5.0.cfg	3b7b220e6df0e5f37ff07b78f5da87439a8ab7907d9aab1ee48e08bbf23e5897

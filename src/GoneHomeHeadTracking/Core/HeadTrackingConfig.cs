@@ -1,9 +1,9 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 
 using CameraUnlock.Core.Config;
 using CameraUnlock.Core.Protocol;
+using HeadTracking.Legacy;
 using UnityEngine;
 
 namespace HeadTracking
@@ -54,121 +54,41 @@ namespace HeadTracking
         public Color ReticleColor { get; set; } = Color.white;
 
         /// <summary>
-        /// Loads configuration from file if it exists, otherwise returns defaults.
+        /// Loads configuration from file if it exists, otherwise writes the default file and
+        /// returns defaults. The file is read by the frozen v1.5.0 reader in Legacy/.
         /// </summary>
         /// <param name="configPath">Path to the config file</param>
         /// <param name="log">Optional logging action</param>
         /// <returns>Loaded or default configuration</returns>
         public static HeadTrackingConfig LoadFromFile(string configPath, Action<string> log = null)
         {
-            var config = new HeadTrackingConfig();
-
-            try
+            LegacyConfig legacy = LegacyConfigReader.Read(configPath, log, out bool found, out _);
+            if (!found)
             {
-                if (!File.Exists(configPath))
-                {
-                    WriteDefaults(configPath, log);
-                    return config;
-                }
-
-                Dictionary<string, string> values = ConfigParsingUtils.ParseIniFile(configPath);
-                foreach (var kvp in values)
-                {
-                    string key = kvp.Key.ToLowerInvariant();
-                    string value = kvp.Value;
-
-                    switch (key)
-                    {
-                        case "udpport":
-                            if (ConfigParsingUtils.TryParseInt(value, out int port))
-                                config.UdpPort = port;
-                            break;
-                        case "yawsensitivity":
-                            if (ConfigParsingUtils.TryParseFloat(value, out float yaw))
-                                config.YawSensitivity = yaw;
-                            break;
-                        case "pitchsensitivity":
-                            if (ConfigParsingUtils.TryParseFloat(value, out float pitch))
-                                config.PitchSensitivity = pitch;
-                            break;
-                        case "rollsensitivity":
-                            if (ConfigParsingUtils.TryParseFloat(value, out float roll))
-                                config.RollSensitivity = roll;
-                            break;
-                        case "localsmoothing":
-                            if (ConfigParsingUtils.TryParseFloat(value, out float localSmoothing))
-                                config.LocalSmoothing = Math.Max(0f, Math.Min(1f, localSmoothing));
-                            break;
-                        case "remotesmoothing":
-                            if (ConfigParsingUtils.TryParseFloat(value, out float remoteSmoothing))
-                                config.RemoteSmoothing = Math.Max(0f, Math.Min(1f, remoteSmoothing));
-                            break;
-                        case "togglekey":
-                            config.ToggleKey = ParseKeyCode(value, config.ToggleKey, "ToggleKey", log);
-                            break;
-                        case "positiontogglekey":
-                            config.PositionToggleKey = ParseKeyCode(value, config.PositionToggleKey, "PositionToggleKey", log);
-                            break;
-                        case "yawmodekey":
-                            config.YawModeKey = ParseKeyCode(value, config.YawModeKey, "YawModeKey", log);
-                            break;
-                        case "worldspaceyaw":
-                            if (ConfigParsingUtils.TryParseBool(value, out bool worldYaw))
-                                config.WorldSpaceYaw = worldYaw;
-                            break;
-                        case "positionsensitivityx":
-                            if (ConfigParsingUtils.TryParseFloat(value, out float posX))
-                                config.PositionSensitivityX = posX;
-                            break;
-                        case "positionsensitivityy":
-                            if (ConfigParsingUtils.TryParseFloat(value, out float posY))
-                                config.PositionSensitivityY = posY;
-                            break;
-                        case "positionsensitivityz":
-                            if (ConfigParsingUtils.TryParseFloat(value, out float posZ))
-                                config.PositionSensitivityZ = posZ;
-                            break;
-                        case "invertpositionx":
-                            if (ConfigParsingUtils.TryParseBool(value, out bool invX))
-                                config.InvertPositionX = invX;
-                            break;
-                        case "invertpositiony":
-                            if (ConfigParsingUtils.TryParseBool(value, out bool invY))
-                                config.InvertPositionY = invY;
-                            break;
-                        case "inverttrackerz":
-                            if (ConfigParsingUtils.TryParseBool(value, out bool invZ))
-                                config.InvertTrackerZ = invZ;
-                            break;
-                        case "showreticle":
-                            if (ConfigParsingUtils.TryParseBool(value, out bool show))
-                                config.ShowReticle = show;
-                            break;
-                        case "reticlecolor":
-                            if (ConfigParsingUtils.TryParseColor(value, out float[] rgba))
-                                config.ReticleColor = new Color(rgba[0], rgba[1], rgba[2], rgba[3]);
-                            break;
-                    }
-                }
-
-                log?.Invoke("Config loaded from HeadTracking.cfg");
-            }
-            catch (Exception ex)
-            {
-                log?.Invoke($"Config load error (using defaults): {ex.Message}");
+                WriteDefaults(configPath, log);
             }
 
-            return config;
-        }
-
-        private static KeyCode ParseKeyCode(string value, KeyCode fallback, string settingName, Action<string> log)
-        {
-            if (!Enum.IsDefined(typeof(KeyCode), value))
+            return new HeadTrackingConfig
             {
-                log?.Invoke($"Invalid {settingName} value '{value}' - using default {fallback}");
-                return fallback;
-            }
-            return (KeyCode)Enum.Parse(typeof(KeyCode), value, true);
+                UdpPort = legacy.UdpPort,
+                YawSensitivity = legacy.YawSensitivity,
+                PitchSensitivity = legacy.PitchSensitivity,
+                RollSensitivity = legacy.RollSensitivity,
+                LocalSmoothing = legacy.LocalSmoothing,
+                RemoteSmoothing = legacy.RemoteSmoothing,
+                ToggleKey = legacy.ToggleKey,
+                PositionToggleKey = legacy.PositionToggleKey,
+                YawModeKey = legacy.YawModeKey,
+                WorldSpaceYaw = legacy.WorldSpaceYaw,
+                PositionSensitivityX = legacy.PositionSensitivityX,
+                PositionSensitivityY = legacy.PositionSensitivityY,
+                PositionSensitivityZ = legacy.PositionSensitivityZ,
+                InvertPositionX = legacy.InvertPositionX,
+                InvertPositionY = legacy.InvertPositionY,
+                InvertTrackerZ = legacy.InvertTrackerZ,
+                ShowReticle = legacy.ShowReticle,
+                ReticleColor = legacy.ReticleColor,
+            };
         }
 
         private static void WriteDefaults(string configPath, Action<string> log)

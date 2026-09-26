@@ -24,7 +24,11 @@ build = { cmd = "dotnet build src/GoneHomeHeadTracking/GoneHomeHeadTracking.cspr
 # game. Needs the game installed; skips and succeeds without it.
 verify-refs = { cmd = "powershell -ExecutionPolicy Bypass -File cameraunlock-core/scripts/verify-assembly-refs.ps1 -GameId gone-home -BuildDir src/GoneHomeHeadTracking/bin/Release", depends-on = ["build"] }
 install = { cmd = "powershell -ExecutionPolicy Bypass -File scripts/deploy.ps1 Release", depends-on = ["build"] }
-package = { cmd = "powershell -ExecutionPolicy Bypass -File scripts/package-release.ps1", depends-on = ["build"] }
+# The config tests, among them the differential test in tests/config_differential, which holds
+# the legacy import to the v1.5.0 reader it replaces on every published build's first-run file and
+# on core's mutation corpus.
+test = { cmd = "dotnet test tests/GoneHomeHeadTracking.Tests/GoneHomeHeadTracking.Tests.csproj -c Release", depends-on = ["build"] }
+package = { cmd = "powershell -ExecutionPolicy Bypass -File scripts/package-release.ps1", depends-on = ["test"] }
 uninstall = "scripts/uninstall.cmd"
 vanilla = "powershell -ExecutionPolicy Bypass -File scripts/vanilla.ps1"
 clean = "dotnet clean src/GoneHomeHeadTracking/GoneHomeHeadTracking.csproj"
