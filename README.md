@@ -302,14 +302,14 @@ Because Gone Home has no separate mod loader, there is nothing additional to rem
 
 - [Pixi](https://pixi.sh) package manager
 - .NET SDK 8.0 or newer
-- Gone Home installed locally (Unity DLLs are needed as build references)
+
+The build does not need Gone Home. It compiles against Unity reference stubs that `pixi run build` builds from the cameraunlock-core submodule first. Only `pixi run install` needs the game.
 
 ### Build
 
 ```bash
 git clone --recurse-submodules https://github.com/itsloopyo/gone-home-headtracking.git
 cd gone-home-headtracking
-pixi run setup-libs    # copy Unity DLLs from your game install
 pixi run build
 pixi run install       # build and install to the game directory
 ```
