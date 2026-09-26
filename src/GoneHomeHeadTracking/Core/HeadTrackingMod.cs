@@ -188,17 +188,9 @@ namespace HeadTracking
         {
             string dir = Path.GetDirectoryName(typeof(HeadTrackingMod).Assembly.Location);
             string configPath = Path.Combine(dir, GoneHomeConfig.FileName);
-            _configOwner = new ConfigOwner<GoneHomeConfig>(new ConfigOwnerOptions<GoneHomeConfig>
-            {
-                Path = configPath,
-                Table = GoneHomeConfig.Table(),
-                Import = LegacyConfigImport.Create(),
-                LegacySourcePath = Path.Combine(dir, GoneHomeConfig.LegacyFileName),
-                Header = new RenderHeader(GoneHomeConfig.DisplayName),
-                Defaults = DefaultsFile.PerUser(),
-                // The mod draws no messages of its own, so the player's line goes to the log.
-                StatusSink = message => Log("[Config] " + message),
-            });
+            // The mod draws no messages of its own, so the player's line goes to the log.
+            _configOwner = new ConfigOwner<GoneHomeConfig>(
+                GoneHomeConfig.OwnerOptions(dir, DefaultsFile.PerUser(), message => Log("[Config] " + message)));
 
             ConfigLoadResult<GoneHomeConfig> loaded = _configOwner.Load();
             _config = loaded.Config;

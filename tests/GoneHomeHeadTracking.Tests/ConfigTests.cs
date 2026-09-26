@@ -220,13 +220,7 @@ namespace HeadTracking.Tests
 
         private static ConfigOwner<GoneHomeConfig> Owner(string dir)
         {
-            return new ConfigOwner<GoneHomeConfig>(new ConfigOwnerOptions<GoneHomeConfig>
-            {
-                Path = Path.Combine(dir, GoneHomeConfig.FileName),
-                Table = GoneHomeConfig.Table(),
-                Header = new RenderHeader(GoneHomeConfig.DisplayName),
-                Defaults = DefaultsFile.At(DefaultsPath(dir)),
-            });
+            return new ConfigOwner<GoneHomeConfig>(GoneHomeConfig.OwnerOptions(dir, DefaultsFile.At(DefaultsPath(dir))));
         }
 
         private sealed class TempDir : IDisposable

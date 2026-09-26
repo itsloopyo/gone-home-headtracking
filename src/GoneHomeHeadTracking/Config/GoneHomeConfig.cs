@@ -1,4 +1,6 @@
+using System;
 using CameraUnlock.Core.Config;
+using HeadTracking.Legacy;
 
 namespace HeadTracking
 {
@@ -32,6 +34,25 @@ namespace HeadTracking
                 .Select(ConfigConcepts.WorldSpaceYaw).Writable()
                 .Select(ConfigConcepts.RotationEnabled).Writable()
                 .Select(ConfigConcepts.PositionEnabled).Writable();
+        }
+
+        /// <summary>
+        /// The owner's options for the CameraUnlock.ini in <paramref name="folder"/>, importing the
+        /// HeadTracking.cfg beside it. The mod passes <see cref="DefaultsFile.PerUser"/> and every
+        /// test a <see cref="DefaultsFile.At"/> scratch path, so both run the options the mod ships.
+        /// </summary>
+        public static ConfigOwnerOptions<GoneHomeConfig> OwnerOptions(string folder, DefaultsFile defaults, Action<string> statusSink = null)
+        {
+            return new ConfigOwnerOptions<GoneHomeConfig>
+            {
+                Path = System.IO.Path.Combine(folder, FileName),
+                Table = Table(),
+                Import = LegacyConfigImport.Create(),
+                LegacySourcePath = System.IO.Path.Combine(folder, LegacyFileName),
+                Header = new RenderHeader(DisplayName),
+                Defaults = defaults,
+                StatusSink = statusSink,
+            };
         }
     }
 }

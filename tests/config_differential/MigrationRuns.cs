@@ -124,15 +124,7 @@ namespace HeadTracking.Tests.Differential
 
         private static ConfigOwner<GoneHomeConfig> Owner(LegacyFolder folder, DefaultsFile defaults)
         {
-            return new ConfigOwner<GoneHomeConfig>(new ConfigOwnerOptions<GoneHomeConfig>
-            {
-                Path = Path.Combine(folder.Path, GoneHomeConfig.FileName),
-                Table = GoneHomeConfig.Table(),
-                Import = LegacyConfigImport.Create(),
-                LegacySourcePath = folder.LegacyPath,
-                Header = new RenderHeader(GoneHomeConfig.DisplayName),
-                Defaults = defaults,
-            });
+            return new ConfigOwner<GoneHomeConfig>(GoneHomeConfig.OwnerOptions(folder.Path, defaults));
         }
 
         /// <summary>Every setting a row of the table holds, floats with their bits.</summary>
