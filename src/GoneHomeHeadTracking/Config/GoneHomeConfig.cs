@@ -39,7 +39,7 @@ namespace HeadTracking
         /// <summary>
         /// The owner's options for the CameraUnlock.ini in <paramref name="folder"/>, importing the
         /// HeadTracking.cfg beside it. The mod passes <see cref="DefaultsFile.PerUser"/> and every
-        /// test a <see cref="DefaultsFile.At"/> scratch path, so both run the options the mod ships.
+        /// test a Defaults.ini in its scratch folder, so both run the options the mod ships.
         /// </summary>
         public static ConfigOwnerOptions<GoneHomeConfig> OwnerOptions(string folder, DefaultsFile defaults, Action<string> statusSink = null)
         {
