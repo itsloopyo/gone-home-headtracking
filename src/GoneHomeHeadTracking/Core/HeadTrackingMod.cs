@@ -1,9 +1,15 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using CameraUnlock.Core.Config;
 using CameraUnlock.Core.Data;
-using CameraUnlock.Core.Math;
+using CameraUnlock.Core.Input;
 using CameraUnlock.Core.Processing;
 using CameraUnlock.Core.Protocol;
+using CameraUnlock.Core.Tracking;
 using CameraUnlock.Core.Unity.Extensions;
 using CameraUnlock.Core.Unity.Rendering;
+using HeadTracking.Legacy;
 using UnityEngine;
 
 namespace HeadTracking
@@ -20,8 +26,6 @@ namespace HeadTracking
         /// <summary>Singleton instance</summary>
         public static HeadTrackingMod Instance { get; private set; }
 
-        private enum TrackingMode { Full, RotationOnly, PositionOnly }
-
         private OpenTrackReceiver _receiver;
         private CameraController _cameraController;
         private AimController _aimController;
@@ -29,10 +33,14 @@ namespace HeadTracking
         private GameReticleFinder _gameReticleFinder;
         private InteractionTextPositioner _interactionTextPositioner;
         private bool _isEnabled;
-        private TrackingMode _trackingMode = TrackingMode.Full;
+        private TrackingMode _trackingMode;
 
         // Configuration
-        private HeadTrackingConfig _config;
+        private GoneHomeConfig _config;
+        private ConfigOwner<GoneHomeConfig> _configOwner;
+        private KeyBinding[] _toggleKeys;
+        private KeyBinding[] _cycleTrackingModeKeys;
+        private KeyBinding[] _yawModeKeys;
 
         // State
         private bool _wasConnected;
@@ -49,8 +57,7 @@ namespace HeadTracking
             Instance = this;
             Log($"Initializing {ModName} v{ModVersion}...");
 
-            // Load config
-            _config = HeadTrackingConfig.LoadFromFile(HeadTrackingConfig.GetDefaultConfigPath(), Log);
+            LoadConfig();
 
             // Initialize components
             _receiver = new OpenTrackReceiver();
@@ -61,35 +68,40 @@ namespace HeadTracking
             {
                 LocalSmoothing = _config.LocalSmoothing,
                 RemoteSmoothing = _config.RemoteSmoothing,
-                Sensitivity = new SensitivitySettings(
-                    _config.YawSensitivity,
-                    _config.PitchSensitivity,
-                    _config.RollSensitivity,
-                    invertYaw: false, invertPitch: false, invertRoll: false
-                ),
+                Sensitivity = SensitivitySettings.Default,
                 Deadzone = DeadzoneSettings.None
             };
             var interpolator = new PoseInterpolator();
             var positionProcessor = new PositionProcessor
             {
                 TrackerPivotForward = 0.01f,
+                // Every published build shipped InvertPositionX=true and the other two false, and
+                // applied them here as the mod's axis conversion. The settings are gone and their
+                // shipped values stay in the code.
                 Settings = PositionSettings.Symmetric(
-                    _config.PositionSensitivityX, _config.PositionSensitivityY, _config.PositionSensitivityZ,
+                    1.0f, 1.0f, 1.0f,
                     float.MaxValue, float.MaxValue, float.MaxValue, float.MaxValue,
                     _config.LocalSmoothing, _config.RemoteSmoothing,
-                    invertX: _config.InvertPositionX, invertY: _config.InvertPositionY, invertZ: _config.InvertTrackerZ
+                    invertX: LegacyConfigImport.ShippedInvertPositionX,
+                    invertY: LegacyConfigImport.ShippedInvertPositionY,
+                    invertZ: LegacyConfigImport.ShippedInvertTrackerZ
                 )
             };
             var positionInterpolator = new PositionInterpolator();
             _cameraController = new CameraController(_receiver, processor, interpolator, positionProcessor, positionInterpolator);
             _cameraController.WorldSpaceYaw = _config.WorldSpaceYaw;
 
+            // The pair always names a mode: the table reads a pair that names none as its default.
+            _trackingMode = TrackingModeChannels.Decode(_config.RotationEnabled, _config.PositionEnabled).Value;
+            ApplyTrackingMode();
+
             // Aim system will be initialized lazily in Update() to avoid early init issues
             _aimSystemInitialized = false;
 
-            _isEnabled = true;
+            _isEnabled = _config.EnableOnStartup;
 
-            Log($"{ModName} loaded! Port: {_config.UdpPort}, Toggle: {_config.ToggleKey}");
+            Log($"{ModName} loaded! Port: {_config.UdpPort}, Toggle: {_config.ToggleKeyName}, "
+                + $"tracking {(_isEnabled ? "on" : "off")}, mode: {_trackingMode.Description()}");
         }
 
         private void Update()
@@ -100,23 +112,21 @@ namespace HeadTracking
                 InitializeAimSystem();
             }
 
-            // Hotkey checks: Input.anyKeyDown short-circuits the lookups on the
-            // overwhelming majority of frames where no key transition occurs.
-            // Two equivalent binding sets per the project standard: the configurable
-            // nav-cluster key, OR the fixed Ctrl+Shift chord.
+            // Input.anyKeyDown short-circuits the lookups on the overwhelming majority of
+            // frames where no key transition occurs.
             if (Input.anyKeyDown)
             {
-                if (ChordHotkeys.IsActionPressed(_config.ToggleKey, ChordHotkeys.ToggleLetter))
+                if (KeyBindingInput.IsTriggered(_toggleKeys))
                 {
                     ToggleTracking();
                 }
 
-                if (ChordHotkeys.IsActionPressed(_config.PositionToggleKey, ChordHotkeys.PositionLetter))
+                if (KeyBindingInput.IsTriggered(_cycleTrackingModeKeys))
                 {
                     CycleTrackingMode();
                 }
 
-                if (ChordHotkeys.IsActionPressed(_config.YawModeKey, ChordHotkeys.FourthToggleLetter))
+                if (KeyBindingInput.IsTriggered(_yawModeKeys))
                 {
                     ToggleYawMode();
                 }
@@ -134,32 +144,102 @@ namespace HeadTracking
 
         private void ToggleYawMode()
         {
-            _cameraController.WorldSpaceYaw = !_cameraController.WorldSpaceYaw;
-            Log(_cameraController.WorldSpaceYaw
+            bool worldSpace = !_cameraController.WorldSpaceYaw;
+            _cameraController.WorldSpaceYaw = worldSpace;
+            Log(worldSpace
                 ? "Yaw mode: world-space (horizon-locked)"
                 : "Yaw mode: camera-local");
+            SaveConfig(c => c.WorldSpaceYaw = worldSpace);
         }
 
         private void CycleTrackingMode()
         {
             _trackingMode = (TrackingMode)(((int)_trackingMode + 1) % 3);
-            switch (_trackingMode)
+            ApplyTrackingMode();
+            Log($"Tracking mode: {_trackingMode.Description()}");
+
+            bool rotation;
+            bool position;
+            TrackingModeChannels.Encode(_trackingMode, out rotation, out position);
+            SaveConfig(c =>
             {
-                case TrackingMode.Full:
-                    _cameraController.RotationEnabled = true;
-                    _cameraController.PositionEnabled = true;
-                    Log("Tracking mode: full (rotation + position)");
-                    break;
-                case TrackingMode.RotationOnly:
-                    _cameraController.RotationEnabled = true;
-                    _cameraController.PositionEnabled = false;
-                    Log("Tracking mode: rotation only");
-                    break;
-                case TrackingMode.PositionOnly:
-                    _cameraController.RotationEnabled = false;
-                    _cameraController.PositionEnabled = true;
-                    Log("Tracking mode: position only");
-                    break;
+                c.RotationEnabled = rotation;
+                c.PositionEnabled = position;
+            });
+        }
+
+        private void ApplyTrackingMode()
+        {
+            bool rotation;
+            bool position;
+            TrackingModeChannels.Encode(_trackingMode, out rotation, out position);
+            _cameraController.RotationEnabled = rotation;
+            _cameraController.PositionEnabled = position;
+        }
+
+        /// <summary>
+        /// The settings live in CameraUnlock.ini beside this DLL, in GoneHome_Data\Managed, read and
+        /// written by core's config owner, with rows set to default following the player's
+        /// Defaults.ini. While CameraUnlock.ini is absent the owner imports HeadTracking.cfg, the
+        /// file every earlier build read, through the frozen v1.5.0 reader, and never writes it.
+        /// Runs in Awake on the main thread, where the hotkeys that save also run.
+        /// </summary>
+        private void LoadConfig()
+        {
+            string dir = Path.GetDirectoryName(typeof(HeadTrackingMod).Assembly.Location);
+            string configPath = Path.Combine(dir, GoneHomeConfig.FileName);
+            _configOwner = new ConfigOwner<GoneHomeConfig>(new ConfigOwnerOptions<GoneHomeConfig>
+            {
+                Path = configPath,
+                Table = GoneHomeConfig.Table(),
+                Import = LegacyConfigImport.Create(),
+                LegacySourcePath = Path.Combine(dir, GoneHomeConfig.LegacyFileName),
+                Header = new RenderHeader(GoneHomeConfig.DisplayName),
+                Defaults = DefaultsFile.PerUser(),
+                // The mod draws no messages of its own, so the player's line goes to the log.
+                StatusSink = message => Log("[Config] " + message),
+            });
+
+            ConfigLoadResult<GoneHomeConfig> loaded = _configOwner.Load();
+            _config = loaded.Config;
+            foreach (string line in loaded.Log) Log("[Config] " + line);
+            Log("[Config] " + configPath + ": " + loaded.Status);
+
+            _toggleKeys = ParseKeys("ToggleKey", _config.ToggleKeyName);
+            _cycleTrackingModeKeys = ParseKeys("CycleTrackingModeKey", _config.CycleTrackingModeKeyName);
+            _yawModeKeys = ParseKeys("YawModeKey", _config.YawModeKeyName);
+        }
+
+        // The table's hotkey codec has read every list the file holds, so a list that does not
+        // parse reaches here only from a legacy import the owner deferred: a key code the key
+        // table names no key for, which the import writes as the number. v1.5.0 still fired the
+        // chord beside such a key, so the items that parse are bound and the rest are logged.
+        private static KeyBinding[] ParseKeys(string key, string text)
+        {
+            KeyBinding[] bindings;
+            string error;
+            if (KeyBindings.TryParse(text, out bindings, out error)) return bindings;
+
+            var kept = new List<KeyBinding>();
+            foreach (string item in text.Split(','))
+            {
+                if (KeyBindings.TryParse(item, out bindings, out error)) kept.AddRange(bindings);
+                else Log("[Config] [Hotkeys] " + key + ": " + error + ", so it is not bound this session");
+            }
+            return kept.ToArray();
+        }
+
+        /// <summary>
+        /// Called after the new value is already applied. A save that fails is logged, the owner's
+        /// reason reaches the log through the status sink, and the session keeps the new value.
+        /// </summary>
+        private void SaveConfig(Action<GoneHomeConfig> change)
+        {
+            ConfigSaveResult saved = _configOwner.Save(change);
+            foreach (string line in saved.Log) Log("[Config] " + line);
+            if (saved.Status != ConfigSaveStatus.Saved)
+            {
+                Log("[Config] " + saved.Status + ": the change applies to this session only.");
             }
         }
 
@@ -222,11 +302,15 @@ namespace HeadTracking
                 _reticleRenderer = gameObject.AddComponent<IMGUIReticle>();
             }
             _reticleRenderer.Initialize(GetReticlePosition);
-            _reticleRenderer.ReticleColor = _config.ReticleColor;
-            _reticleRenderer.IsVisible = _config.ShowReticle;
+            _reticleRenderer.ReticleColor = Color.white;
+            _reticleRenderer.IsVisible = _isEnabled;
 
-            // Hide the game's crosshair - we'll draw our own at the correct aim position
-            _gameReticleFinder.TryHideGameReticle();
+            // Hide the game's crosshair - we'll draw our own at the correct aim position.
+            // With tracking off at start the game's crosshair stays until tracking is turned on.
+            if (_isEnabled)
+            {
+                _gameReticleFinder.TryHideGameReticle();
+            }
 
             // Update hook with aim components
             if (_cameraHook != null)
@@ -243,7 +327,7 @@ namespace HeadTracking
         /// </summary>
         private bool GetReticlePosition(out float screenX, out float screenY)
         {
-            if (!CameraTrackingHook.IsInGameplay || !_config.ShowReticle || _aimController == null)
+            if (!CameraTrackingHook.IsInGameplay || _aimController == null)
             {
                 screenX = 0;
                 screenY = 0;
@@ -256,6 +340,10 @@ namespace HeadTracking
             return true;
         }
 
+        /// <summary>
+        /// End and its chord: on and off for this session only. It never writes the config; the
+        /// next start follows EnableOnStartup.
+        /// </summary>
         public void ToggleTracking()
         {
             _isEnabled = !_isEnabled;
@@ -273,7 +361,7 @@ namespace HeadTracking
                 _gameReticleFinder?.TryHideGameReticle();
                 if (_reticleRenderer != null)
                 {
-                    _reticleRenderer.IsVisible = _config.ShowReticle;
+                    _reticleRenderer.IsVisible = true;
                 }
             }
             else

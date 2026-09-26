@@ -6,6 +6,12 @@
 
 An unofficial head tracking mod for Gone Home that moves the view with your head while your mouse keeps control of the cursor, driven by OpenTrack over UDP, with no VR headset required.
 
+> **Settings have moved.** This version keeps its settings in `GoneHome_Data\Managed\CameraUnlock.ini`.
+> The first time it starts it reads your settings from the old
+> `GoneHome_Data\Managed\HeadTracking.cfg` into the new file, and leaves the old file as it was.
+> Sensitivity, axis inversion and reticle settings are gone: set sensitivity and inversion in
+> your tracker. [Configuration](#configuration) has the details.
+
 ## Features
 
 - **Decoupled look and aim**: Your head moves the view; the mouse still controls the interaction cursor.
@@ -131,49 +137,108 @@ Two equivalent binding sets - use whichever your keyboard has:
 
 `Page Down` / `Ctrl+Shift+H` toggles yaw mode between horizon-locked world-space yaw (default; head yaw stays horizontal even when the camera is pitched, but produces a camera arc at extreme head yaw + mouse pitch combinations) and camera-local yaw (head yaw rotates around the camera's current up axis - matches the dying-light-2 and obra-dinn defaults).
 
-The nav-cluster keys are configurable in `HeadTracking.cfg`; the chord set is fixed.
+The tracking mode and the yaw mode you pick are saved to `CameraUnlock.ini`, and the next start
+begins in them. `End` turns head tracking on and off for this session only; whether it is on at the
+next start is the `EnableOnStartup` setting.
+
+These are the default keys. Each action reads a list of keys from `CameraUnlock.ini`
+(`ToggleKey`, `CycleTrackingModeKey`, `YawModeKey`), and any key in the list fires it, so you can
+add, rebind or remove any of them, the chords included.
+
+While head tracking is on, the mod hides the game's crosshair and draws its own in the direction
+the mouse aims. It has no setting or toggle.
 
 ## Configuration
 
-The mod creates `HeadTracking.cfg` in `GoneHome_Data\Managed\` on first run. Edit it and restart the game to apply changes.
+<!-- cameraunlock:config -->
+The mod reads its settings from `GoneHome_Data\Managed\CameraUnlock.ini` in the game folder, and creates the file when it starts and finds none. Edit it with any text editor.
+
+A setting set to `default` takes its value from `Defaults.ini`, which every head tracking mod that keeps its settings in `CameraUnlock.ini` reads. Head tracking mods that keep their settings in another file do not read it, and neither do earlier versions of this mod. Writing a value in place of `default` changes that setting for this game only. When the mod saves a setting that a hotkey changed in game, it writes the new value in place of `default`, so that setting no longer follows `Defaults.ini` in this game until you set it to `default` again.
+
+`Defaults.ini` is `%AppData%\CameraUnlock\Defaults.ini` on Windows; `$XDG_CONFIG_HOME/CameraUnlock/Defaults.ini` on Linux, or `~/.config/CameraUnlock/Defaults.ini` where `XDG_CONFIG_HOME` is not set, under Wine and Proton too; and `~/Library/Application Support/CameraUnlock/Defaults.ini` on macOS. The mod's log, where it writes one, names the file it read.
+
+When the mod starts and finds no `Defaults.ini`, it creates one holding the built-in values, unless Windows runs the game as a packaged app, or the game runs on Linux or macOS without Wine or Proton. The mod never changes `Defaults.ini` after that. Edit it with any text editor.
+
+Earlier versions of the mod kept these settings in `HeadTracking.cfg`, in the same folder. The first time this version starts and finds no `CameraUnlock.ini`, it reads your settings from `HeadTracking.cfg` and writes them into `CameraUnlock.ini`. It never changes `HeadTracking.cfg`, and does not read it again while `CameraUnlock.ini` exists.
+
+A setting that the defaults below set to `default` is written as `default` when the value imported for it equals its default at that start, which is the value `Defaults.ini` gives it, or the built-in value where `Defaults.ini` gives none. It then follows `Defaults.ini`. Every other setting is written with the value imported for it. `RotationEnabled` and `PositionEnabled` are one setting here, the tracking mode, so both are written as `default` or neither is.
+
+Comments, and keys the mod never read, are not carried over. Nor are these, where your old file had them:
+
+- Reticle settings, and a key that toggled the reticle.
+- A sensitivity, scale, deadzone, response curve or axis inversion you changed from its default. Set these in your tracker instead.
+- The setting for a feature that earlier versions shipped switched off while it was untested. It now follows the mod's default.
+
+An older version of the mod reads `HeadTracking.cfg` and never reads `CameraUnlock.ini`, so a setting you change after updating is not in `HeadTracking.cfg`.
+
+Deleting only `CameraUnlock.ini` makes the next start read `HeadTracking.cfg` again. To go back to the defaults, replace everything in `CameraUnlock.ini` with the defaults below. Every setting they set to `default` then follows `Defaults.ini`.
+
+On Linux and macOS without Wine or Proton, this version reads its settings and saves none: it creates no `CameraUnlock.ini`, reads your settings from `HeadTracking.cfg` again at every start while there is no `CameraUnlock.ini`, and a change made in game lasts until the game closes.
+
+The built-in value of each setting set to `default` below:
+
+- `UdpPort=4242`
+- `EnableOnStartup=true`
+- `WorldSpaceYaw=true`
+- `RotationEnabled=true`
+- `LocalSmoothing=0.0`
+- `RemoteSmoothing=0.15`
+- `PositionEnabled=true`
+- `ToggleKey=End, Ctrl+Shift+Y`
+- `CycleTrackingModeKey=PageUp, Ctrl+Shift+G`
+- `YawModeKey=PageDown, Ctrl+Shift+H`
+
+With every setting at its default, the file reads:
 
 ```ini
-# Network
-UdpPort = 4242
+; Gone Home head tracking settings.
+; Comments start with ; and go on their own line. Text after a value is part of the value.
+; Hotkeys are key names such as End, PageUp or Ctrl+Shift+Y. Separate several with commas; leave empty for none.
+; A setting set to default takes its value from Defaults.ini, which every head tracking mod
+; that keeps its settings in CameraUnlock.ini reads: %AppData%\CameraUnlock\Defaults.ini on
+; Windows, $XDG_CONFIG_HOME/CameraUnlock/Defaults.ini (normally ~/.config/CameraUnlock) on
+; Linux, under Wine and Proton too, and ~/Library/Application Support/CameraUnlock/Defaults.ini
+; on macOS. The log names the file it read. Write a value instead of default to change that
+; setting for this game only.
 
-# Keybindings (Unity KeyCode names)
-# See https://docs.unity3d.com/ScriptReference/KeyCode.html
-ToggleKey = End
-PositionToggleKey = PageUp
-YawModeKey = PageDown
+[CameraUnlock]
+; Written by the mod. Leave this section in place.
+ConfigFormat=1
 
-# Yaw mode: true = horizon-locked world-space (default), false = camera-local
-WorldSpaceYaw = true
+[Network]
+; UDP port the mod receives tracker data on (OpenTrack protocol).
+UdpPort=default
 
-# Sensitivity (multipliers). Not clamped; 0.1-5.0 is the useful range.
-YawSensitivity = 1.0
-PitchSensitivity = 1.0
-RollSensitivity = 1.0
+[General]
+; true: head tracking is on when the game starts. ToggleKey turns it on and off.
+EnableOnStartup=default
+; true: yaw turns around the world's up axis. false: around the camera's own up axis.
+WorldSpaceYaw=default
+; true: turning your head turns the view.
+; Tracking mode at startup, with PositionEnabled. The mode hotkey changes both.
+RotationEnabled=default
 
-# Smoothing (0.0-1.0). Picked per connection from the tracker's source address,
-# and both values cover rotation and position.
-# Tracker running on this machine (loopback)
-LocalSmoothing = 0.0
-# Tracker on a remote device over the network
-RemoteSmoothing = 0.15
+[Smoothing]
+; Smoothing when the tracker runs on this PC. 0 is the least, 1 the most.
+LocalSmoothing=default
+; Smoothing when the tracker is another device on the network, such as a phone.
+; 0 is the least, 1 the most.
+RemoteSmoothing=default
 
-# Position tracking
-PositionSensitivityX = 1.0
-PositionSensitivityY = 1.0
-PositionSensitivityZ = 1.0
-InvertPositionX = true
-InvertPositionY = false
-InvertTrackerZ = false
+[Position]
+; true: moving your head moves the view.
+; Tracking mode at startup, with RotationEnabled. The mode hotkey changes both.
+PositionEnabled=default
 
-# Reticle (R,G,B,A in 0.0-1.0)
-ShowReticle = true
-ReticleColor = 1.0,1.0,1.0,1.0
+[Hotkeys]
+; Turns head tracking on and off.
+ToggleKey=default
+; Changes the tracking mode: rotation and position, rotation only, position only.
+CycleTrackingModeKey=default
+; Switches yaw between the world's up axis and the camera's own (WorldSpaceYaw).
+YawModeKey=default
 ```
+<!-- /cameraunlock:config -->
 
 ## Troubleshooting
 
@@ -203,13 +268,15 @@ contain the most recent session.
 - Centre it in your tracker app: OpenTrack's **Center** bind, or the centre button in your phone app. The mod applies what the tracker sends as-is and has no centre of its own.
 
 **Jittery or unstable tracking:**
-- Raise `RemoteSmoothing` (phone/network tracker) or `LocalSmoothing` (tracker on this PC) in `HeadTracking.cfg` toward `0.3`-`0.5`.
+- Raise `RemoteSmoothing` (phone/network tracker) or `LocalSmoothing` (tracker on this PC) in `CameraUnlock.ini` toward `0.3`-`0.5`.
 - For phone trackers over Wi-Fi, prefer wired USB tethering or a 5 GHz network.
 - Tune the OpenTrack filter (Accela or similar) if you are routing through OpenTrack.
 
 **Wrong rotation axis or inverted motion:**
-- Flip `InvertPositionX`, `InvertPositionY`, or `InvertTrackerZ` in `HeadTracking.cfg`.
-- For inverted yaw or pitch, use OpenTrack's per-axis "Invert" switches in the Output mapping.
+- The mod has no inversion settings. Use OpenTrack's per-axis "Invert" switches in the Output mapping, or your tracker app's own.
+
+**A config edit had no effect:**
+- Make sure nothing follows the value on the line. Text after a value is part of the value, so a note on the same line makes the value unreadable and the setting keeps its default. Put a comment on a line of its own, starting with `;`. `HeadTracking.log` names each line the mod could not read.
 
 **Yaw feels wrong when looking up or down at extreme angles:**
 - Try toggling between world-locked and camera-local yaw with `Page Down` (or `Ctrl+Shift+H`). World-locked (default) is horizon-stable; camera-local follows the camera's current up-axis.
@@ -221,11 +288,11 @@ contain the most recent session.
 
 ## Updating
 
-Download the new release and run `install.cmd` again. Your `HeadTracking.cfg` is preserved.
+Download the new release and run `install.cmd` again. Your settings in `CameraUnlock.ini` are kept.
 
 ## Uninstalling
 
-Run `uninstall.cmd`. This removes the mod DLLs and restores the original `Assembly-CSharp.dll` from the backup created at install time.
+Run `uninstall.cmd`. This removes the mod DLLs and restores the original `Assembly-CSharp.dll` from the backup created at install time. It leaves your settings, `GoneHome_Data\Managed\CameraUnlock.ini` and the old `GoneHome_Data\Managed\HeadTracking.cfg`, in place.
 
 Because Gone Home has no separate mod loader, there is nothing additional to remove. The `/force` flag is accepted for parity with other CameraUnlock mods but is a no-op here.
 

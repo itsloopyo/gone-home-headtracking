@@ -39,6 +39,7 @@
        mod would pull CameraUnlock.Core.Unity into this net48 host. -->
   <ItemGroup>
     <Compile Include="..\..\src\GoneHomeHeadTracking\Legacy\*.cs" Link="Legacy\%(Filename)%(Extension)" />
+    <Compile Include="..\..\src\GoneHomeHeadTracking\Config\*.cs" Link="Config\%(Filename)%(Extension)" />
     <Compile Include="..\config_differential\**\*.cs" Link="config_differential\%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="..\..\cameraunlock-core\csharp\testing\IniMutations.cs" Link="IniMutations.cs" />
   </ItemGroup>

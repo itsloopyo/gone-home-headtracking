@@ -25,11 +25,11 @@ set "MOD_SEED_FILES="
 :: reinstall: paths relative to the game folder, quoted when one holds a space.
 :: Keep the line when it is blank, or the list another mod's uninstall.cmd set
 :: in the same console is used instead.
-set "PRESERVE_FILES="
+set "PRESERVE_FILES=GoneHome_Data\Managed\CameraUnlock.ini GoneHome_Data\Managed\HeadTracking.cfg"
 set "MANAGED_SUBFOLDER=GoneHome_Data\Managed"
 set "ASSEMBLY_DLL=Assembly-CSharp.dll"
 set "PATCH_MARKER=HeadTracking_Patched_GoneHome_v4"
-set "MANAGED_EXTRAS=HeadTracking.cfg HeadTracking.log HeadTracking_BOOT.log HeadTracking.manifest.json"
+set "MANAGED_EXTRAS=HeadTracking.log HeadTracking_BOOT.log HeadTracking.manifest.json"
 set "ASI_LOADER_NAME=winmm.dll"
 :: Not used by this mod. Set blank so a value another mod's wrapper left in
 :: the same console does not reach the body.
