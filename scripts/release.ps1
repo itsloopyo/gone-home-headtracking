@@ -105,6 +105,13 @@ if ($Version -notmatch '^\d+\.\d+\.\d+$') {
 
 $tagName = "v$Version"
 
+try {
+    Assert-ReleaseNotBelowCanonicalSince -RepoRoot $projectDir -Version $Version
+} catch {
+    Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+    exit 1
+}
+
 # --- Preconditions (the safety net; no interactive gate behind them) ---
 
 $currentBranch = git rev-parse --abbrev-ref HEAD
