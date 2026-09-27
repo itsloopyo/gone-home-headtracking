@@ -31,15 +31,11 @@ namespace HeadTracking.Tests.Differential
             "[Position]\r\nPositionEnabled=false\r\n\r\n" +
             "[Hotkeys]\r\nToggleKey=F8\r\nCycleTrackingModeKey=F7\r\nYawModeKey=F6\r\n";
 
-        // v1.5.0 read UdpPort with no range, and the canonical row holds 1 to 65535. No approved
-        // rule changes a port outside it, so the owner defers these imports: the session runs on
-        // what v1.5.0 read, nothing is written, and the import runs again at the next start.
-        private static readonly string[] DeferredPorts = { "value -1", "out of range 0", "out of range 70000" };
-
-        private static IEnumerable<string> Deferred()
-        {
-            return DeferredPorts.Select(v => "corpus UdpPort: " + v).OrderBy(n => n, StringComparer.Ordinal);
-        }
+        /// <summary>
+        /// The comment only v1.3.0 to v1.3.2 wrote above their default <c>WorldSpaceYaw = false</c>.
+        /// A file holding it compares WorldSpaceYaw with false, every other file with v1.5.0's true.
+        /// </summary>
+        private const string V13YawComment = "# false = camera-local yaw (default; matches dying-light-2/obra-dinn)";
 
         private static readonly Lazy<string> MigratedDir = new Lazy<string>(() =>
         {
@@ -65,7 +61,6 @@ namespace HeadTracking.Tests.Differential
         {
             List<DifferentialInput> inputs = Inputs.All().ToList();
             var failures = new ConcurrentBag<string>();
-            var deferred = new ConcurrentBag<string>();
             var created = new ConcurrentDictionary<string, byte[]>(StringComparer.Ordinal);
             byte[] committed = File.ReadAllBytes(ConfigTests.Committed());
             var defaults = new GoneHomeConfig();
@@ -90,25 +85,19 @@ namespace HeadTracking.Tests.Differential
                         continue;
                     }
 
-                    if (migration.Status == ConfigLoadStatus.Deferred)
-                    {
-                        if (!readOnly) deferred.Add(input.Name);
-                        if (!migration.Reason.Contains("cannot be converted")) failures.Add(name + ": deferred: " + migration.Reason);
-                    }
-                    else if (migration.Status != ConfigLoadStatus.Migrated)
+                    // v1.5.0 read UdpPort with no range; a port outside 1 to 65535 is clamped (N4), so
+                    // every input migrates.
+                    if (migration.Status != ConfigLoadStatus.Migrated)
                     {
                         failures.Add(name + ": " + migration.Status + ": " + migration.Reason);
                         continue;
                     }
-                    else
+                    created[ComparisonOneTests.Sha256(migration.Created)] = migration.Created;
+                    string text = Encoding.ASCII.GetString(migration.Created);
+                    foreach (ConceptDescriptor concept in import.Result.FollowsDefaultsIni)
                     {
-                        created[ComparisonOneTests.Sha256(migration.Created)] = migration.Created;
-                        string text = Encoding.ASCII.GetString(migration.Created);
-                        foreach (ConceptDescriptor concept in import.Result.FollowsDefaultsIni)
-                        {
-                            if (!text.Contains("\r\n" + concept.Key + "=default\r\n"))
-                                failures.Add(name + ": " + concept.Key + " follows Defaults.ini and is not written default");
-                        }
+                        if (!text.Contains("\r\n" + concept.Key + "=default\r\n"))
+                            failures.Add(name + ": " + concept.Key + " follows Defaults.ini and is not written default");
                     }
                     if (imported != migrated) failures.Add(name + ":\n" + ComparisonOneTests.Diff(imported, migrated));
                 }
@@ -120,7 +109,6 @@ namespace HeadTracking.Tests.Differential
             {
                 File.WriteAllBytes(Path.Combine(MigratedDir.Value, file.Key + ".ini"), file.Value);
             }
-            Assert.Equal(Deferred(), deferred.OrderBy(n => n, StringComparer.Ordinal));
         }
 
         /// <summary>
@@ -172,6 +160,11 @@ namespace HeadTracking.Tests.Differential
 
                 SortedDictionary<string, string> before = LegacyStartup.Of(old);
                 var expectedDrops = new List<string>();
+                if (old.UdpPort < 1 || old.UdpPort > 65535)
+                {
+                    before["UdpPort"] = old.UdpPort < 1 ? "1" : "65535";
+                    expectedDrops.Add("NumberOutOfRange  UdpPort " + old.UdpPort.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                }
                 Action<string, string, KeyCode, KeyCode> hotkey = (row, legacyKey, primary, letter) =>
                 {
                     if (!IsModifier(primary)) return;
@@ -219,13 +212,16 @@ namespace HeadTracking.Tests.Differential
                 if (!drops.SequenceEqual(expectedDrops)) failures.Add(input.Name + ": dropped " + string.Join("; ", drops));
                 if (!poses.SequenceEqual(expectedShaping)) failures.Add(input.Name + ": pose shaping " + string.Join("; ", poses));
 
-                // A setting the player never changed from v1.5.0's default follows Defaults.ini. v1.5.0
-                // had no setting for EnableOnStartup or the tracking mode, so those always do.
+                // A setting the player never changed from the default of the build that wrote the
+                // file follows Defaults.ini: v1.5.0's, but for WorldSpaceYaw in a file v1.3.x wrote.
+                // v1.5.0 had no setting for EnableOnStartup or the tracking mode, so those always do.
+                // A clamped port is the player's, so the port read is compared.
                 var shipped = new LegacyConfig();
+                bool v13 = input.Bytes != null && Encoding.ASCII.GetString(input.Bytes).Contains(V13YawComment);
                 var expectedFollows = new List<string> { "UdpPort", "EnableOnStartup", "RotationEnabled", "PositionEnabled",
                     "WorldSpaceYaw", "ToggleKey", "CycleTrackingModeKey", "YawModeKey", "LocalSmoothing", "RemoteSmoothing" };
                 if (old.UdpPort != shipped.UdpPort) expectedFollows.Remove("UdpPort");
-                if (old.WorldSpaceYaw != shipped.WorldSpaceYaw) expectedFollows.Remove("WorldSpaceYaw");
+                if (old.WorldSpaceYaw != (v13 ? false : shipped.WorldSpaceYaw)) expectedFollows.Remove("WorldSpaceYaw");
                 if (old.ToggleKey != shipped.ToggleKey) expectedFollows.Remove("ToggleKey");
                 if (old.PositionToggleKey != shipped.PositionToggleKey) expectedFollows.Remove("CycleTrackingModeKey");
                 if (old.YawModeKey != shipped.YawModeKey) expectedFollows.Remove("YawModeKey");
@@ -271,8 +267,7 @@ namespace HeadTracking.Tests.Differential
 
         /// <summary>
         /// A file an older build wrote keeps keys v1.5.0 no longer read, and the migration log
-        /// names each one. v1.3.0's also holds the camera-local yaw that build started in, which
-        /// v1.5.0 kept and the new file keeps as a value.
+        /// names each one.
         /// </summary>
         [Fact]
         public void AnOlderFirstRunLogsWhatItDoesNotCarry()
@@ -284,7 +279,77 @@ namespace HeadTracking.Tests.Differential
             Assert.Contains(migration.Log, l => l.Contains("not carried: RecenterKey=Home"));
             Assert.Contains(migration.Log, l => l.Contains("not carried: Smoothing=0.15"));
             Assert.Contains(migration.Log, l => l.Contains("not carried: InvertPositionZ=true"));
-            Assert.Contains("WorldSpaceYaw=false", Encoding.ASCII.GetString(migration.Created));
+        }
+
+        /// <summary>
+        /// Every build's first-run file leaves every row to Defaults.ini. v1.3.0 to v1.3.2 wrote
+        /// WorldSpaceYaw = false, their default, and the comment that names it so; over the built-in
+        /// Defaults.ini the migration writes it default, which gives true.
+        /// </summary>
+        [Fact]
+        public void EveryFirstRunFileFollowsDefaultsIniOnEveryRow()
+        {
+            string[] all = { "UdpPort", "EnableOnStartup", "RotationEnabled", "PositionEnabled", "WorldSpaceYaw",
+                "ToggleKey", "CycleTrackingModeKey", "YawModeKey", "LocalSmoothing", "RemoteSmoothing" };
+            foreach (DifferentialInput input in Inputs.FirstRuns())
+            {
+                ImportOutcome import = ImportOutcome.Run(input);
+                Assert.Equal(all, import.Result.FollowsDefaultsIni.Select(c => c.Key).ToArray());
+            }
+            foreach (string version in new[] { "v1.3.0", "v1.3.1", "v1.3.2" })
+            {
+                DifferentialInput input = Inputs.FirstRuns().Single(i => i.Name == "first run " + version);
+                Assert.Contains("\nWorldSpaceYaw = false\n", Encoding.ASCII.GetString(input.Bytes));
+                ImportOutcome import = ImportOutcome.Run(input);
+                Assert.False(import.Config.WorldSpaceYaw);
+                MigrationOutcome migration = MigrationOutcome.Run(input, null, false);
+                Assert.Equal(ConfigLoadStatus.Migrated, migration.Status);
+                Assert.Contains("\r\nWorldSpaceYaw=default\r\n", Encoding.ASCII.GetString(migration.Created));
+                Assert.True(migration.Config.WorldSpaceYaw);
+            }
+        }
+
+        /// <summary>
+        /// In a file v1.3.x wrote, WorldSpaceYaw = true is the player's choice, and is kept where
+        /// Defaults.ini gives false. Without the v1.3.x comment the file shows no older build, so
+        /// WorldSpaceYaw = false is compared with v1.5.0's true and kept as the player's.
+        /// </summary>
+        [Fact]
+        public void TheV13CommentDecidesWhichDefaultWorldSpaceYawIsComparedWith()
+        {
+            string v130 = Encoding.ASCII.GetString(Inputs.FirstRuns().Single(i => i.Name == "first run v1.3.0").Bytes);
+
+            byte[] setTrue = Encoding.ASCII.GetBytes(v130.Replace("WorldSpaceYaw = false", "WorldSpaceYaw = true"));
+            MigrationOutcome kept = MigrationOutcome.Run(new DifferentialInput("v1.3.0 set true", setTrue), OtherDefaults, false);
+            Assert.Equal(ConfigLoadStatus.Migrated, kept.Status);
+            Assert.Contains("\r\nWorldSpaceYaw=true\r\n", Encoding.ASCII.GetString(kept.Created));
+            Assert.True(kept.Config.WorldSpaceYaw);
+
+            byte[] noComment = Encoding.ASCII.GetBytes(v130.Replace(V13YawComment + "\n", ""));
+            Assert.DoesNotContain(V13YawComment, Encoding.ASCII.GetString(noComment));
+            MigrationOutcome carried = MigrationOutcome.Run(new DifferentialInput("v1.3.0 without the comment", noComment), null, false);
+            Assert.Equal(ConfigLoadStatus.Migrated, carried.Status);
+            Assert.Contains("\r\nWorldSpaceYaw=false\r\n", Encoding.ASCII.GetString(carried.Created));
+            Assert.False(carried.Config.WorldSpaceYaw);
+        }
+
+        /// <summary>
+        /// Normalisation N4: a port outside 1 to 65535 imports as the nearest end, the clamp is
+        /// logged, and the value is the player's, so it is written even where Defaults.ini differs.
+        /// </summary>
+        [Fact]
+        public void APortOutsideTheRangeIsClampedAndCarried()
+        {
+            MigrationOutcome low = MigrationOutcome.Run(new DifferentialInput("UdpPort = 0", Edited("UdpPort = 4242", "UdpPort = 0")), OtherDefaults, false);
+            Assert.Equal(ConfigLoadStatus.Migrated, low.Status);
+            Assert.Equal(1, low.Config.UdpPort);
+            Assert.Contains("\r\nUdpPort=1\r\n", Encoding.ASCII.GetString(low.Created));
+            Assert.Contains(low.Log, l => l.Contains("UdpPort=0, it is outside the range this setting takes"));
+
+            MigrationOutcome high = MigrationOutcome.Run(new DifferentialInput("UdpPort = 70000", Edited("UdpPort = 4242", "UdpPort = 70000")), null, false);
+            Assert.Equal(ConfigLoadStatus.Migrated, high.Status);
+            Assert.Equal(65535, high.Config.UdpPort);
+            Assert.Contains("\r\nUdpPort=65535\r\n", Encoding.ASCII.GetString(high.Created));
         }
 
         /// <summary>Every KeyCode a file can name converts to the key name that reads back as it.</summary>

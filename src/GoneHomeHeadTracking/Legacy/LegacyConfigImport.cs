@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using CameraUnlock.Core.Config;
 using CameraUnlock.Core.Data;
@@ -25,6 +26,14 @@ namespace HeadTracking.Legacy
         public const bool ShippedInvertPositionY = false;
         public const bool ShippedInvertTrackerZ = false;
 
+        /// <summary>
+        /// The comment v1.3.0 to v1.3.2 wrote above <c>WorldSpaceYaw = false</c>, their default. v1.4.0
+        /// and later default to true and wrote another comment; no build before v1.3.0 wrote the key.
+        /// Nothing rewrites the file after its first start, so a file holding this line was written by
+        /// v1.3.x.
+        /// </summary>
+        public const string V13WorldSpaceYawComment = "# false = camera-local yaw (default; matches dying-light-2/obra-dinn)";
+
         public static LegacyImport<GoneHomeConfig> Create()
         {
             return new LegacyImport<GoneHomeConfig>(Run, LegacyConfigKeys.All());
@@ -43,25 +52,39 @@ namespace HeadTracking.Legacy
             var dropped = new List<DroppedValue>();
             var poseShaping = new List<PoseShapingValue>();
             var followsDefaultsIni = new LegacyFollowsDefaultsIni();
-            Map(legacy, config, dropped, poseShaping, followsDefaultsIni);
+            bool writtenByV13 = found && loadError == null && WrittenByV13(input.Path);
+            Map(legacy, writtenByV13, config, dropped, poseShaping, followsDefaultsIni);
             if (loadError != null) return ImportResult.Refused("Config load error (using defaults): " + loadError);
             return found
                 ? ImportResult.Imported(dropped, poseShaping, followsDefaultsIni.Concepts)
                 : ImportResult.Absent(dropped, poseShaping, followsDefaultsIni.Concepts);
         }
 
+        /// <summary>Whether the file holds the line only v1.3.x wrote, <see cref="V13WorldSpaceYawComment"/>.</summary>
+        public static bool WrittenByV13(string path)
+        {
+            foreach (string line in File.ReadAllLines(path))
+            {
+                if (line.Trim() == V13WorldSpaceYawComment) return true;
+            }
+            return false;
+        }
+
         /// <summary>
         /// The reader refuses NaN and infinity, so no value reaches here that normalisation N2 would
         /// change. The file has no sections, so a dropped value names none. Every row is compared
         /// with v1.5.0's own default, a fresh <see cref="LegacyConfig"/>, so a setting the player
-        /// never changed follows Defaults.ini.
+        /// never changed follows Defaults.ini, except <c>WorldSpaceYaw</c> in a file v1.3.x wrote,
+        /// which is compared with that build's false.
         /// </summary>
-        public static void Map(LegacyConfig legacy, GoneHomeConfig config, List<DroppedValue> dropped,
+        public static void Map(LegacyConfig legacy, bool writtenByV13, GoneHomeConfig config, List<DroppedValue> dropped,
             List<PoseShapingValue> poseShaping, LegacyFollowsDefaultsIni followsDefaultsIni)
         {
             var shipped = new LegacyConfig();
 
-            config.UdpPort = legacy.UdpPort;
+            // v1.5.0 read the port with no range (normalisation N4). The value read is compared, so
+            // a port clamped onto 4242 is still the player's.
+            config.UdpPort = LegacyNormalisations.ClampToRange(ConfigConcepts.UdpPort, legacy.UdpPort, "", "UdpPort", dropped);
             followsDefaultsIni.Setting(ConfigConcepts.UdpPort, legacy.UdpPort, shipped.UdpPort);
 
             // Every published build started with head tracking on and in rotation and position, and
@@ -73,7 +96,7 @@ namespace HeadTracking.Legacy
             followsDefaultsIni.TrackingMode(true);
 
             config.WorldSpaceYaw = legacy.WorldSpaceYaw;
-            followsDefaultsIni.Setting(ConfigConcepts.WorldSpaceYaw, legacy.WorldSpaceYaw, shipped.WorldSpaceYaw);
+            followsDefaultsIni.Setting(ConfigConcepts.WorldSpaceYaw, legacy.WorldSpaceYaw, writtenByV13 ? false : shipped.WorldSpaceYaw);
 
             config.ToggleKeyName = HotkeyList(legacy.ToggleKey, KeyCode.Y, "ToggleKey", dropped);
             followsDefaultsIni.Setting(ConfigConcepts.ToggleKey, legacy.ToggleKey, shipped.ToggleKey);
