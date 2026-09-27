@@ -68,6 +68,9 @@ namespace HeadTracking.Tests.Differential
             var deferred = new ConcurrentBag<string>();
             var created = new ConcurrentDictionary<string, byte[]>(StringComparer.Ordinal);
             byte[] committed = File.ReadAllBytes(ConfigTests.Committed());
+            var defaults = new GoneHomeConfig();
+            GoneHomeConfig.Table().Apply(CanonicalIni.Parse(defaultsIni == null ? new byte[0] : Encoding.ASCII.GetBytes(defaultsIni)), defaults);
+            Dictionary<string, string> defaultLines = Lines(MigrationOutcome.Describe(defaults));
             Parallel.ForEach(inputs, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, input =>
             {
                 ImportOutcome import = ImportOutcome.Run(input);
@@ -76,7 +79,7 @@ namespace HeadTracking.Tests.Differential
                     string name = input.Name + (readOnly ? " (read-only)" : "");
                     MigrationOutcome migration = MigrationOutcome.Run(input, defaultsIni, readOnly);
 
-                    string imported = MigrationOutcome.Describe(import.Config);
+                    string imported = FollowingDefaultsIni(MigrationOutcome.Describe(import.Config), import.Result, defaultLines);
                     string migrated = MigrationOutcome.Describe(migration.Config);
                     if (input.Bytes == null)
                     {
@@ -100,6 +103,12 @@ namespace HeadTracking.Tests.Differential
                     else
                     {
                         created[ComparisonOneTests.Sha256(migration.Created)] = migration.Created;
+                        string text = Encoding.ASCII.GetString(migration.Created);
+                        foreach (ConceptDescriptor concept in import.Result.FollowsDefaultsIni)
+                        {
+                            if (!text.Contains("\r\n" + concept.Key + "=default\r\n"))
+                                failures.Add(name + ": " + concept.Key + " follows Defaults.ini and is not written default");
+                        }
                     }
                     if (imported != migrated) failures.Add(name + ":\n" + ComparisonOneTests.Diff(imported, migrated));
                 }
@@ -112,6 +121,36 @@ namespace HeadTracking.Tests.Differential
                 File.WriteAllBytes(Path.Combine(MigratedDir.Value, file.Key + ".ini"), file.Value);
             }
             Assert.Equal(Deferred(), deferred.OrderBy(n => n, StringComparer.Ordinal));
+        }
+
+        /// <summary>
+        /// What the migration gives: the import, with every row it leaves to Defaults.ini at the
+        /// value <paramref name="defaultLines"/> holds for it.
+        /// </summary>
+        private static string FollowingDefaultsIni(string described, ImportResult result, Dictionary<string, string> defaultLines)
+        {
+            Dictionary<string, string> lines = Lines(described);
+            foreach (ConceptDescriptor concept in result.FollowsDefaultsIni)
+            {
+                foreach (string name in new[] { concept.Key, "Position." + concept.Key })
+                {
+                    if (lines.ContainsKey(name)) lines[name] = defaultLines[name];
+                }
+            }
+            var s = new StringBuilder();
+            foreach (string name in Lines(described).Keys) s.Append(name).Append('=').Append(lines[name]).Append('\n');
+            return s.ToString();
+        }
+
+        private static Dictionary<string, string> Lines(string described)
+        {
+            var lines = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (string line in described.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                int eq = line.IndexOf('=');
+                lines.Add(line.Substring(0, eq), line.Substring(eq + 1));
+            }
+            return lines;
         }
 
         /// <summary>
@@ -132,6 +171,16 @@ namespace HeadTracking.Tests.Differential
                 if (result.Status != status) failures.Add(input.Name + ": " + result.Status);
 
                 SortedDictionary<string, string> before = LegacyStartup.Of(old);
+                var expectedDrops = new List<string>();
+                Action<string, string, KeyCode, KeyCode> hotkey = (row, legacyKey, primary, letter) =>
+                {
+                    if (!IsModifier(primary)) return;
+                    before[row] = LegacyStartup.Hotkey(KeyCode.None, letter);
+                    expectedDrops.Add("ModifierKey  " + legacyKey + " " + primary);
+                };
+                hotkey("ToggleKey", "ToggleKey", old.ToggleKey, KeyCode.Y);
+                hotkey("CycleTrackingModeKey", "PositionToggleKey", old.PositionToggleKey, KeyCode.G);
+                hotkey("YawModeKey", "YawModeKey", old.YawModeKey, KeyCode.H);
                 SortedDictionary<string, string> after = ConvertedStartup.Of(import.Config);
                 Assert.Equal(before.Keys, after.Keys);
                 foreach (string key in before.Keys)
@@ -141,7 +190,6 @@ namespace HeadTracking.Tests.Differential
                     if (before[key] != after[key]) failures.Add(input.Name + ": " + key + " " + before[key] + " -> " + after[key]);
                 }
 
-                var expectedDrops = new List<string>();
                 var expectedShaping = new List<string>();
                 Action<string, string, string, bool> shaping = (key, value, shipped, folded) =>
                 {
@@ -170,6 +218,21 @@ namespace HeadTracking.Tests.Differential
                 string[] poses = result.PoseShaping.Select(p => p.Section + " " + p.Key + " " + p.Value + " " + p.Shipped + " " + p.Folded).ToArray();
                 if (!drops.SequenceEqual(expectedDrops)) failures.Add(input.Name + ": dropped " + string.Join("; ", drops));
                 if (!poses.SequenceEqual(expectedShaping)) failures.Add(input.Name + ": pose shaping " + string.Join("; ", poses));
+
+                // A setting the player never changed from v1.5.0's default follows Defaults.ini. v1.5.0
+                // had no setting for EnableOnStartup or the tracking mode, so those always do.
+                var shipped = new LegacyConfig();
+                var expectedFollows = new List<string> { "UdpPort", "EnableOnStartup", "RotationEnabled", "PositionEnabled",
+                    "WorldSpaceYaw", "ToggleKey", "CycleTrackingModeKey", "YawModeKey", "LocalSmoothing", "RemoteSmoothing" };
+                if (old.UdpPort != shipped.UdpPort) expectedFollows.Remove("UdpPort");
+                if (old.WorldSpaceYaw != shipped.WorldSpaceYaw) expectedFollows.Remove("WorldSpaceYaw");
+                if (old.ToggleKey != shipped.ToggleKey) expectedFollows.Remove("ToggleKey");
+                if (old.PositionToggleKey != shipped.PositionToggleKey) expectedFollows.Remove("CycleTrackingModeKey");
+                if (old.YawModeKey != shipped.YawModeKey) expectedFollows.Remove("YawModeKey");
+                if (!old.LocalSmoothing.Equals(shipped.LocalSmoothing)) expectedFollows.Remove("LocalSmoothing");
+                if (!old.RemoteSmoothing.Equals(shipped.RemoteSmoothing)) expectedFollows.Remove("RemoteSmoothing");
+                string[] follows = result.FollowsDefaultsIni.Select(c => c.Key).ToArray();
+                if (!follows.SequenceEqual(expectedFollows)) failures.Add(input.Name + ": follows Defaults.ini " + string.Join(", ", follows));
             });
             Assert.True(failures.IsEmpty, string.Join("\n", failures.OrderBy(f => f, StringComparer.Ordinal).Take(20)));
         }
@@ -235,16 +298,102 @@ namespace HeadTracking.Tests.Differential
                 codes.Add(int.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture));
             }
             Assert.True(codes.Count > 300, "keys.json gave " + codes.Count + " Unity codes");
-            foreach (int code in codes.Where(c => c != 0))
+            foreach (int code in codes.Where(c => c != 0 && !IsModifier((KeyCode)c)))
             {
-                string list = LegacyConfigImport.HotkeyList((KeyCode)code, KeyCode.H);
+                var dropped = new List<DroppedValue>();
+                string list = LegacyConfigImport.HotkeyList((KeyCode)code, KeyCode.H, "YawModeKey", dropped);
                 KeyBinding[] bindings;
                 string error;
                 Assert.True(KeyBindings.TryParse(list, out bindings, out error), code + ": " + list + ": " + error);
                 Assert.Equal(new KeyBinding(KeyModifiers.None, code), bindings[0]);
                 Assert.Equal(new KeyBinding(KeyModifiers.Ctrl | KeyModifiers.Shift, (int)KeyCode.H), bindings[1]);
+                Assert.Empty(dropped);
             }
-            Assert.Equal("Ctrl+Shift+G", LegacyConfigImport.HotkeyList(KeyCode.None, KeyCode.G));
+            var none = new List<DroppedValue>();
+            Assert.Equal("Ctrl+Shift+G", LegacyConfigImport.HotkeyList(KeyCode.None, KeyCode.G, "PositionToggleKey", none));
+            Assert.Empty(none);
+        }
+
+        /// <summary>
+        /// Normalisation N3: a Ctrl, Shift or Alt key on its own is left unbound, the drop is logged,
+        /// and the action keeps its Ctrl+Shift chord.
+        /// </summary>
+        [Fact]
+        public void AModifierKeyOnItsOwnImportsAsUnboundAndKeepsTheChord()
+        {
+            foreach (KeyCode modifier in Modifiers)
+            {
+                var dropped = new List<DroppedValue>();
+                Assert.Equal("Ctrl+Shift+Y", LegacyConfigImport.HotkeyList(modifier, KeyCode.Y, "ToggleKey", dropped));
+                DroppedValue drop = Assert.Single(dropped);
+                Assert.Equal(DropRule.ModifierKey, drop.Rule);
+                Assert.Equal("ToggleKey", drop.Key);
+                Assert.Equal(modifier.ToString(), drop.Value);
+            }
+
+            MigrationOutcome migration = MigrationOutcome.Run(
+                new DifferentialInput("ToggleKey = RightShift", Edited("ToggleKey = End", "ToggleKey = RightShift")), null, false);
+            Assert.Equal(ConfigLoadStatus.Migrated, migration.Status);
+            Assert.Equal("Ctrl+Shift+Y", migration.Config.ToggleKeyName);
+            Assert.Contains("\r\nToggleKey=Ctrl+Shift+Y\r\n", Encoding.ASCII.GetString(migration.Created));
+            Assert.Contains(migration.Log, l => l.Contains("ToggleKey=RightShift, it is a Ctrl, Shift or Alt key"));
+        }
+
+        /// <summary>
+        /// A setting the player never changed from v1.5.0's default takes Defaults.ini's value and is
+        /// written default, whatever Defaults.ini holds. A setting the player changed keeps its value.
+        /// </summary>
+        [Fact]
+        public void AnUntouchedSettingFollowsDefaultsIniAndAChangedOneStays()
+        {
+            MigrationOutcome untouched = MigrationOutcome.Run(
+                new DifferentialInput("first run v1.5.0", Inputs.NewestFirstRun()), OtherDefaults, false);
+            Assert.Equal(ConfigLoadStatus.Migrated, untouched.Status);
+            Assert.Equal(4343, untouched.Config.UdpPort);
+            Assert.False(untouched.Config.EnableOnStartup);
+            Assert.False(untouched.Config.WorldSpaceYaw);
+            Assert.True(untouched.Config.RotationEnabled);
+            Assert.False(untouched.Config.PositionEnabled);
+            Assert.Equal(0.25f, untouched.Config.LocalSmoothing);
+            Assert.Equal(0.35f, untouched.Config.RemoteSmoothing);
+            Assert.Equal("F8", untouched.Config.ToggleKeyName);
+            Assert.Equal("F7", untouched.Config.CycleTrackingModeKeyName);
+            Assert.Equal("F6", untouched.Config.YawModeKeyName);
+            Assert.Equal(Encoding.ASCII.GetString(File.ReadAllBytes(ConfigTests.Committed())),
+                Encoding.ASCII.GetString(untouched.Created));
+
+            byte[] legacy = Edited("ToggleKey = End", "ToggleKey = F9", "WorldSpaceYaw = true", "WorldSpaceYaw = false");
+            MigrationOutcome changed = MigrationOutcome.Run(new DifferentialInput("changed", legacy), OtherDefaults, false);
+            Assert.Equal(ConfigLoadStatus.Migrated, changed.Status);
+            string text = Encoding.ASCII.GetString(changed.Created);
+            Assert.Contains("\r\nToggleKey=F9, Ctrl+Shift+Y\r\n", text);
+            // Changed, and equal to what default gives over these defaults, so still written default.
+            Assert.Contains("\r\nWorldSpaceYaw=default\r\n", text);
+            Assert.Contains("\r\nUdpPort=default\r\n", text);
+            Assert.Equal("F9, Ctrl+Shift+Y", changed.Config.ToggleKeyName);
+            Assert.Equal(4343, changed.Config.UdpPort);
+        }
+
+        /// <summary>The newest published build's first-run file with each pair of texts replaced.</summary>
+        private static byte[] Edited(params string[] pairs)
+        {
+            string text = Encoding.ASCII.GetString(Inputs.NewestFirstRun());
+            for (int i = 0; i < pairs.Length; i += 2)
+            {
+                Assert.Contains(pairs[i], text);
+                text = text.Replace(pairs[i], pairs[i + 1]);
+            }
+            return Encoding.ASCII.GetBytes(text);
+        }
+
+        private static readonly KeyCode[] Modifiers =
+        {
+            KeyCode.LeftControl, KeyCode.RightControl, KeyCode.LeftShift, KeyCode.RightShift, KeyCode.LeftAlt, KeyCode.RightAlt,
+        };
+
+        private static bool IsModifier(KeyCode code)
+        {
+            return Array.IndexOf(Modifiers, code) >= 0;
         }
 
         private static string Codec(float value)
