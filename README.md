@@ -2,15 +2,7 @@
 
 ![Gone Home running with this mod](https://raw.githubusercontent.com/itsloopyo/gone-home-headtracking/main/assets/readme-clip.gif)
 
-*Recorded in Gone Home with this mod running. Gone Home is the property of [The Fullbright Company](https://fullbright.company/); the footage is shown here to demonstrate the mod and is not covered by this project's licence.*
-
-An unofficial head tracking mod for Gone Home that moves the view with your head while your mouse keeps control of the cursor, driven by OpenTrack over UDP, with no VR headset required.
-
-> **Settings have moved.** This version keeps its settings in `GoneHome_Data\Managed\CameraUnlock.ini`.
-> The first time it starts it reads your settings from the old
-> `GoneHome_Data\Managed\HeadTracking.cfg` into the new file, and leaves the old file as it was.
-> Sensitivity, axis inversion and reticle settings are gone: set sensitivity and inversion in
-> your tracker. [Configuration](#configuration) has the details.
+An unofficial head tracking mod for Gone Home that moves the view with your head while your mouse keeps control of look and interaction, driven by a webcam, phone, or any OpenTrack compatible tracker, with no VR headset required.
 
 ## Features
 
@@ -292,7 +284,7 @@ Download the new release and run `install.cmd` again. Your settings in `CameraUn
 
 ## Uninstalling
 
-Run `uninstall.cmd`. This removes the mod DLLs and restores the original `Assembly-CSharp.dll` from the backup created at install time. It leaves your settings, `GoneHome_Data\Managed\CameraUnlock.ini` and the old `GoneHome_Data\Managed\HeadTracking.cfg`, in place.
+Run `uninstall.cmd`. This removes the mod DLLs and restores the original `Assembly-CSharp.dll` from the backup created at install time. It leaves your settings in `GoneHome_Data\Managed\CameraUnlock.ini` in place.
 
 Because Gone Home has no separate mod loader, there is nothing additional to remove. The `/force` flag is accepted for parity with other CameraUnlock mods but is a no-op here.
 
