@@ -13,7 +13,7 @@ clip, which is covered under "Gone Home footage and screenshots" below.
 | Component | Version | Licence | How it ships |
 |-----------|---------|---------|--------------|
 | Mono.Cecil | 0.11.5 | MIT | Pre-built assembly bundled in the installer ZIP and used as the install-time patcher |
-| cameraunlock-core | c6f668f3b067d60703c9abf75c15be0beccc5c78 | MIT | Compiled into `HeadTracking.dll` |
+| cameraunlock-core | a03c24290fae3a9c61f67adcb7c5ba4eedf69f20 | MIT | Compiled into `HeadTracking.dll` |
 | OpenTrack | n/a | ISC | Not bundled; UDP protocol interoperability only |
 
 ---
@@ -57,7 +57,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 Git submodule at `cameraunlock-core/`, compiled into `HeadTracking.dll`. Our own code,
 MIT licensed, reproduced here so the notices are complete.
 
-- Pinned commit: `c6f668f3b067d60703c9abf75c15be0beccc5c78`
+- Pinned commit: `a03c24290fae3a9c61f67adcb7c5ba4eedf69f20`
 
 ```
 MIT License
