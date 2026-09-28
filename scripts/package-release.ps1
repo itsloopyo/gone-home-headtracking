@@ -119,10 +119,6 @@ $cecilPath = & (Join-Path $scriptDir "ensure-cecil.ps1") -ToolsDir $toolsDir
 Copy-Item $cecilPath -Destination $modDestDir -Force
 Write-Host "  mod/Mono.Cecil.dll" -ForegroundColor Green
 
-# Copy patcher source
-Copy-Item $patcherSource -Destination $modDestDir -Force
-Write-Host "  mod/BootstrapPatcher.cs" -ForegroundColor Green
-
 # launcher-manifest.json names tools/BootstrapPatcher.exe as the patch tool, and the launcher
 # refuses a package that does not carry it.
 $nativeToolsDir = Join-Path $ghStagingDir "tools"
@@ -137,8 +133,10 @@ if ($LASTEXITCODE -ne 0) {
     throw "Failed to compile BootstrapPatcher.exe"
 }
 Copy-Item $cecilPath -Destination $nativeToolsDir -Force
+Copy-Item $patcherSource -Destination $nativeToolsDir -Force
 Write-Host "  tools/BootstrapPatcher.exe" -ForegroundColor Green
 Write-Host "  tools/Mono.Cecil.dll" -ForegroundColor Green
+Write-Host "  tools/BootstrapPatcher.cs" -ForegroundColor Green
 
 # Copy documentation. The installer ZIP is a binary distribution: MIT requires
 # the copyright notice and disclaimer of everything we bundle or link to travel
