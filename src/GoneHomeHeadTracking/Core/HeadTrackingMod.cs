@@ -26,12 +26,10 @@ namespace HeadTracking
         /// <summary>Singleton instance</summary>
         public static HeadTrackingMod Instance { get; private set; }
 
+        internal static bool IsQuitting => _isQuitting;
+
         private OpenTrackReceiver _receiver;
         private CameraController _cameraController;
-        private AimController _aimController;
-        private IMGUIReticle _reticleRenderer;
-        private GameReticleFinder _gameReticleFinder;
-        private InteractionTextPositioner _interactionTextPositioner;
         private bool _isEnabled;
         private TrackingMode _trackingMode;
 
@@ -44,7 +42,6 @@ namespace HeadTracking
 
         // State
         private bool _wasConnected;
-        private bool _aimSystemInitialized;
         private static bool _isQuitting;
         private CameraTrackingHook _cameraHook;
         private Camera _cachedMainCamera;
@@ -95,10 +92,15 @@ namespace HeadTracking
             _trackingMode = TrackingModeChannels.Decode(_config.RotationEnabled, _config.PositionEnabled).Value;
             ApplyTrackingMode();
 
-            // Aim system will be initialized lazily in Update() to avoid early init issues
-            _aimSystemInitialized = false;
-
             _isEnabled = _config.EnableOnStartup;
+
+            // The game's crosshair is hidden only while a frame is tracked, and this one is drawn
+            // in its place, at the aim point. It uses no GUILayout, so the per-frame Layout pass
+            // is skipped.
+            var reticle = gameObject.AddComponent<IMGUIReticle>();
+            reticle.useGUILayout = false;
+            reticle.ReticleColor = Color.white;
+            reticle.Initialize(GetReticlePosition);
 
             Log($"{ModName} loaded! Port: {_config.UdpPort}, Toggle: {_config.ToggleKeyName}, "
                 + $"tracking {(_isEnabled ? "on" : "off")}, mode: {_trackingMode.Description()}");
@@ -106,12 +108,6 @@ namespace HeadTracking
 
         private void Update()
         {
-            // Lazy init aim system after game is loaded
-            if (!_aimSystemInitialized && _cameraController != null)
-            {
-                InitializeAimSystem();
-            }
-
             // Input.anyKeyDown short-circuits the lookups on the overwhelming majority of
             // frames where no key transition occurs.
             if (Input.anyKeyDown)
@@ -268,65 +264,27 @@ namespace HeadTracking
                 _cachedMainCamera = currentMain;
                 _cameraCheckCounter = 0;
 
-                // Add hook to camera GameObject
+                // Add hook to camera GameObject. Destroying the old hook above resets the old
+                // camera's view matrix and hands back the HUD it was moving.
                 _cameraHook = _cachedMainCamera.gameObject.AddComponent<CameraTrackingHook>();
-                _cameraHook.Initialize(_cameraController, _aimController, _gameReticleFinder, _interactionTextPositioner, _receiver);
-                _cameraHook.SetEnabled(_isEnabled);
+                _cameraHook.Initialize(_cameraController, _isEnabled);
             }
-        }
-
-        private void InitializeAimSystem()
-        {
-            if (_cameraController == null) return; // Not ready yet
-
-            _aimController = new AimController(_cameraController);
-
-            _gameReticleFinder = new GameReticleFinder();
-
-            // Create interaction text positioner to move "Open Door" etc. to follow crosshair
-            _interactionTextPositioner = new InteractionTextPositioner();
-
-            // Create reticle renderer as MonoBehaviour on same GameObject
-            // Check for existing renderer to prevent duplicates on retry
-            _reticleRenderer = gameObject.GetComponent<IMGUIReticle>();
-            if (NullHelper.IsNull(_reticleRenderer))
-            {
-                _reticleRenderer = gameObject.AddComponent<IMGUIReticle>();
-            }
-            _reticleRenderer.Initialize(GetReticlePosition);
-            _reticleRenderer.ReticleColor = Color.white;
-            _reticleRenderer.IsVisible = _isEnabled;
-
-            // Hide the game's crosshair - we'll draw our own at the correct aim position.
-            // With tracking off at start the game's crosshair stays until tracking is turned on.
-            if (_isEnabled)
-            {
-                _gameReticleFinder.TryHideGameReticle();
-            }
-
-            // Update hook with aim components
-            if (_cameraHook != null)
-            {
-                _cameraHook.SetAimComponents(_aimController, _gameReticleFinder, _interactionTextPositioner);
-            }
-
-            _aimSystemInitialized = true;
         }
 
         /// <summary>
-        /// ReticlePositionProvider delegate for IMGUIReticle.
-        /// Returns screen position for the reticle based on aim offset.
+        /// ReticlePositionProvider delegate for IMGUIReticle: the aim point while the view is
+        /// tracked and the game wants a crosshair, nothing otherwise.
         /// </summary>
         private bool GetReticlePosition(out float screenX, out float screenY)
         {
-            if (!CameraTrackingHook.IsInGameplay || _aimController == null)
+            Vector2 offset;
+            if (_cameraHook == null || !_cameraHook.TryGetReticleOffset(out offset))
             {
                 screenX = 0;
                 screenY = 0;
                 return false;
             }
 
-            Vector2 offset = _aimController.ScreenOffset;
             screenX = Screen.width * 0.5f + offset.x;
             screenY = Screen.height * 0.5f + offset.y;
             return true;
@@ -334,41 +292,22 @@ namespace HeadTracking
 
         /// <summary>
         /// End and its chord: on and off for this session only. It never writes the config; the
-        /// next start follows EnableOnStartup.
+        /// next start follows EnableOnStartup. The hook's next frame resets the view and hands
+        /// the game back its crosshair and interaction text.
         /// </summary>
         public void ToggleTracking()
         {
             _isEnabled = !_isEnabled;
             Log(_isEnabled ? "Tracking enabled" : "Tracking disabled");
 
-            // Update camera hook state
             if (_cameraHook != null)
             {
                 _cameraHook.SetEnabled(_isEnabled);
             }
 
-            if (_isEnabled)
+            if (!_isEnabled)
             {
-                // Re-hide game reticle and show custom reticle
-                _gameReticleFinder?.TryHideGameReticle();
-                if (_reticleRenderer != null)
-                {
-                    _reticleRenderer.IsVisible = true;
-                }
-            }
-            else
-            {
-                _cameraController?.ResetCamera();
-
-                // Restore game reticle when tracking disabled
-                _gameReticleFinder?.RestoreGameReticle();
-                if (_reticleRenderer != null)
-                {
-                    _reticleRenderer.IsVisible = false;
-                }
-
-                // Reset interaction text to original position
-                _interactionTextPositioner?.ResetPosition();
+                _cameraController.ResetCamera();
             }
         }
 
@@ -379,27 +318,13 @@ namespace HeadTracking
 
         private void OnDestroy()
         {
-            // Destroy camera hook if exists
             if (_cameraHook != null)
             {
                 Destroy(_cameraHook);
                 _cameraHook = null;
             }
 
-            // During application quit Unity tears down GameObjects in an
-            // arbitrary order, so the game's reticle / interaction-text objects
-            // we cached may already be half-destroyed: the managed wrapper is
-            // non-null but the native object is gone, and SetActive throws. We
-            // only need to undo our scene-level changes when the mod is being
-            // destroyed mid-session (scene change / recreate), not on quit.
-            if (!_isQuitting)
-            {
-                _gameReticleFinder?.RestoreGameReticle();
-                _interactionTextPositioner?.ResetPosition();
-            }
-
             _receiver?.Dispose();
-            _cameraController?.ResetCamera();
             Instance = null;
 
             // Schedule recreation on next frame

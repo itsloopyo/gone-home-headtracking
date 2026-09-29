@@ -3,119 +3,53 @@ using UnityEngine;
 namespace HeadTracking
 {
     /// <summary>
-    /// Repositions the game's interaction text (e.g., "Open Door", "Examine")
-    /// to follow the decoupled aim point instead of staying at screen center.
-    ///
-    /// Gone Home uses NGUI for its HUD. The interaction text is displayed via:
-    /// - NGUI_HUD.instance.FocusLabel (a UILabel component)
-    ///
-    /// UILabel inherits from UIWidget which uses Transform.localPosition for positioning.
-    /// NGUI coordinates are screen-space with origin typically at center.
+    /// Moves the game's interaction text (NGUI_HUD.FocusLabel: "Open Door", "Examine") to follow
+    /// the decoupled aim point instead of staying at screen center.
     /// </summary>
     public sealed class InteractionTextPositioner
     {
-        // Cached UI elements
-        private object _focusLabelInstance;
-        private Transform _focusLabelTransform;
-        private Vector3 _originalLocalPosition;
+        private Transform _label;
+        private Vector3 _homeLocalPosition;
+        private bool _moved;
 
-        // State
-        private bool _elementsSearched;
-        private bool _initialized;
-        private bool _findErrorLogged;
-
-        /// <summary>
-        /// Updates the position of interaction UI elements based on the aim offset.
-        /// Call this every frame after AimController.UpdateAim().
-        /// </summary>
-        /// <param name="screenOffset">Pixel offset from screen center where aim point is</param>
-        public void UpdatePosition(Vector2 screenOffset)
+        /// <param name="screenOffset">Pixel offset of the aim point from screen center.</param>
+        public void Follow(Component hud, Vector2 screenOffset)
         {
-            // Lazy initialization - find elements if we haven't yet
-            if (!_elementsSearched)
+            Transform label = GameTypeResolver.FocusLabel(hud).transform;
+            if (label != _label)
             {
-                FindUIElements();
+                // A new HUD, or the first frame: the label sits where the game put it.
+                _label = label;
+                _homeLocalPosition = label.localPosition;
+                _moved = false;
             }
 
-            // If we still don't have the elements, nothing to do
-            if (!_initialized || NullHelper.IsNull(_focusLabelTransform))
+            // Screen pixels map to the label's local units through the HUD camera and the UIRoot
+            // scale above the label, which is 1:1 only when the UIRoot is pixel perfect.
+            Camera hudCamera = GameTypeResolver.HudCamera(hud);
+            Transform parent = label.parent;
+            Vector3 screen = hudCamera.WorldToScreenPoint(parent.TransformPoint(_homeLocalPosition));
+            screen.x += screenOffset.x;
+            screen.y += screenOffset.y;
+            Vector3 target = parent.InverseTransformPoint(hudCamera.ScreenToWorldPoint(screen));
+            target.z = _homeLocalPosition.z;
+
+            // An unchanged write would still mark the label dirty and rebuild its NGUI panel.
+            if (label.localPosition != target)
             {
-                return;
-            }
-
-            // NGUI uses local position for UI elements
-            // Assume 1:1 pixel mapping (common for NGUI setups at native resolution)
-            Vector3 newPos = _originalLocalPosition;
-            newPos.x += screenOffset.x;
-            newPos.y += screenOffset.y;
-
-            _focusLabelTransform.localPosition = newPos;
-        }
-
-        /// <summary>
-        /// Resets interaction UI elements to their original positions.
-        /// Call when tracking is disabled or disconnected.
-        /// </summary>
-        public void ResetPosition()
-        {
-            if (!NullHelper.IsNull(_focusLabelTransform))
-            {
-                _focusLabelTransform.localPosition = _originalLocalPosition;
+                label.localPosition = target;
+                _moved = true;
             }
         }
 
-        private void FindUIElements()
+        public void Restore()
         {
-            _elementsSearched = true;
-
-            var instanceProperty = GameTypeResolver.NguiHudInstanceProperty;
-            var focusLabelField = GameTypeResolver.FocusLabelField;
-
-            if (NullHelper.IsNull(GameTypeResolver.NguiHudType) || NullHelper.IsNull(instanceProperty) || NullHelper.IsNull(focusLabelField))
+            if (!_moved) return;
+            _moved = false;
+            if (_label != null)
             {
-                return;
-            }
-
-            try
-            {
-                // Get the NGUI_HUD singleton instance
-                var hudInstance = instanceProperty.GetValue(null, null);
-                if (NullHelper.IsNull(hudInstance))
-                {
-                    _elementsSearched = false; // Retry next frame
-                    return;
-                }
-
-                // Get the FocusLabel (UILabel component)
-                _focusLabelInstance = focusLabelField.GetValue(hudInstance);
-                if (NullHelper.IsNull(_focusLabelInstance))
-                {
-                    _elementsSearched = false;
-                    return;
-                }
-
-                // UILabel is a Component, so we can cast and get its transform
-                var component = _focusLabelInstance as Component;
-                if (NullHelper.IsNull(component))
-                    return;
-
-                _focusLabelTransform = component.transform;
-                _originalLocalPosition = _focusLabelTransform.localPosition;
-
-                _initialized = true;
-            }
-            catch (System.Exception ex)
-            {
-                // The retry below re-runs this every frame, so a persistent fault
-                // would otherwise log at frame rate.
-                if (!_findErrorLogged)
-                {
-                    _findErrorLogged = true;
-                    ModLoader.Log($"[InteractionTextPositioner] FindUIElements error (logged once): {ex}");
-                }
-                _elementsSearched = false; // Retry on error
+                _label.localPosition = _homeLocalPosition;
             }
         }
-
     }
 }

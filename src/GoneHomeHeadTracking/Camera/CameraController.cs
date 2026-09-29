@@ -1,4 +1,5 @@
 using CameraUnlock.Core.Data;
+using CameraUnlock.Core.Math;
 using CameraUnlock.Core.Processing;
 using CameraUnlock.Core.Protocol;
 using CameraUnlock.Core.Unity.Tracking;
@@ -9,8 +10,8 @@ namespace HeadTracking
     /// <summary>
     /// Applies head tracking rotation to the game camera additively.
     /// Rotation is applied on top of existing mouse/controller look to preserve normal controls.
-    /// Delegates to shared TrackingProcessor (sensitivity, smoothing, deadzone)
-    /// and PoseInterpolator (inter-sample interpolation).
+    /// Delegates to shared TrackingProcessor (smoothing) and PoseInterpolator (inter-sample
+    /// interpolation).
     /// </summary>
     public sealed class CameraController
     {
@@ -19,18 +20,6 @@ namespace HeadTracking
         private readonly PoseInterpolator _interpolator;
         private readonly PositionProcessor _positionProcessor;
         private readonly PositionInterpolator _positionInterpolator;
-
-        private Camera _targetCamera;
-        private Vec3 _lastPositionOffset;
-
-        // Tracking-only quaternion for aim compensation
-        private Quaternion _trackingQuaternion = Quaternion.identity;
-
-        /// <summary>
-        /// Gets the tracking-only quaternion (smoothed).
-        /// Used by AimController to compute the aim offset.
-        /// </summary>
-        public Quaternion TrackingQuaternion => _trackingQuaternion;
 
         /// <summary>Whether positional tracking is enabled.</summary>
         public bool PositionEnabled { get; set; } = true;
@@ -46,9 +35,6 @@ namespace HeadTracking
         /// </summary>
         public bool WorldSpaceYaw { get; set; } = true;
 
-        /// <summary>Last applied position offset for transition fadeout.</summary>
-        public Vec3 LastPositionOffset => _lastPositionOffset;
-
         /// <summary>
         /// Creates a new camera controller for applying head tracking.
         /// </summary>
@@ -63,16 +49,14 @@ namespace HeadTracking
         }
 
         /// <summary>
-        /// Applies head tracking rotation to the specified camera.
-        /// Called by CameraTrackingHook.OnPreCull() with the hook's camera.
+        /// Writes the head-tracked view matrix to the camera. Returns false, leaving the camera
+        /// alone, until the tracker has sent a first pose. After that the last pose is held
+        /// through any gap in the data.
         /// </summary>
-        public void ApplyTracking(Camera camera)
+        public bool ApplyTracking(Camera camera)
         {
-            if (camera == null) return;
-            _targetCamera = camera;
-
-            // Get raw tracking data, interpolate between samples, then process
             var rawPose = _receiver.GetLatestPose();
+            if (!rawPose.IsValid) return false;
 
             // Sample-rate-to-frame-rate interpolation is gated on receiving data, never on
             // the smoothing value: LocalSmoothing defaults to 0.0, and a smoothing-based gate
@@ -83,8 +67,7 @@ namespace HeadTracking
             // parameter applies, so refresh the flag every frame from the receiver.
             bool isRemoteConnection = _receiver.IsRemoteConnection;
             _processor.IsRemoteConnection = isRemoteConnection;
-            if (_positionProcessor != null)
-                _positionProcessor.IsRemoteConnection = isRemoteConnection;
+            _positionProcessor.IsRemoteConnection = isRemoteConnection;
 
             var processed = _processor.Process(rawPose, Time.deltaTime);
 
@@ -104,30 +87,28 @@ namespace HeadTracking
                 {
                     ViewMatrixModifier.ApplyHeadRotation(camera, headYaw, -headPitch, headRoll);
                 }
-                _trackingQuaternion = CameraRotationComposer.GetTrackingOnlyRotation(headYaw, headPitch, headRoll);
             }
             else
             {
                 // Reset to clean state so any previously applied head rotation is cleared,
                 // and so the position branch below reads a fresh game view matrix.
                 camera.ResetWorldToCameraMatrix();
-                _trackingQuaternion = Quaternion.identity;
             }
 
-            // Position tracking: use tracker 6DOF data via PositionProcessor
-            if (PositionEnabled && _positionProcessor != null)
+            if (PositionEnabled)
             {
                 var rawPos = _receiver.GetLatestPosition();
                 var interpolatedPos = _positionInterpolator.Update(rawPos, Time.deltaTime);
 
-                var headRotQ = new Quat4(_trackingQuaternion.x, _trackingQuaternion.y, _trackingQuaternion.z, _trackingQuaternion.w);
-                _lastPositionOffset = _positionProcessor.Process(interpolatedPos, headRotQ, Time.deltaTime);
+                // The pivot arc comes from the physical head rotation, which the head still
+                // makes in position-only mode, so it is taken whether or not rotation is applied.
+                Quat4 physicalRotation = QuaternionUtils.FromYawPitchRoll(headYaw, headPitch, headRoll);
+                Vec3 offset = _positionProcessor.Process(interpolatedPos, physicalRotation, Time.deltaTime);
 
                 // Apply position offset via view matrix translation.
                 // Camera-local position: leaning forward moves toward whatever
                 // you're looking at, so you can inspect objects on surfaces.
-                Quaternion gameRotation = camera.transform.rotation;
-                Vector3 worldOffset = PositionApplicator.ToCameraLocalWorld(_lastPositionOffset, gameRotation);
+                Vector3 worldOffset = PositionApplicator.ToCameraLocalWorld(offset, camera.transform.rotation);
                 Matrix4x4 vm = camera.worldToCameraMatrix;
                 Vector3 viewSpaceOffset = vm.MultiplyVector(worldOffset);
                 vm.m03 -= viewSpaceOffset.x;
@@ -135,16 +116,16 @@ namespace HeadTracking
                 vm.m23 -= viewSpaceOffset.z;
                 camera.worldToCameraMatrix = vm;
             }
+
+            return true;
         }
 
         public void ResetCamera()
         {
-            _trackingQuaternion = Quaternion.identity;
             _processor.ResetSmoothing();
             _interpolator.Reset();
-            _positionProcessor?.Reset();
-            _positionInterpolator?.Reset();
-            _lastPositionOffset = Vec3.Zero;
+            _positionProcessor.Reset();
+            _positionInterpolator.Reset();
         }
     }
 }

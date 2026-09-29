@@ -1,46 +1,37 @@
-using System;
 using CameraUnlock.Core.Unity.Extensions;
 using UnityEngine;
 
 namespace HeadTracking
 {
     /// <summary>
-    /// Computes aim offset from head tracking rotation by projecting the clean
-    /// (mouse-controlled) aim direction through the head-tracked view matrix.
-    /// This works in both yaw modes because the projection uses whatever
-    /// worldToCameraMatrix the CameraController set this frame.
+    /// Places the reticle where the game's interaction ray lands, seen through the head-tracked
+    /// view. camera.transform is never modified, so its position and forward are the clean eye
+    /// and aim the game's FrobManager casts from.
     /// </summary>
     public sealed class AimController
     {
-        // Fixed projection distance - Gone Home is a walking sim with no weapons,
-        // so we don't need to track per-frame hitpoints. A fixed distance gives
-        // a stable reticle that doesn't hop between colliders.
-        private const float ProjectionDistance = 10f;
+        public Vector2 ScreenOffset { get; private set; }
 
-        private readonly CameraController _cameraController;
-
-        private Vector2 _screenOffset;
-
-        public Vector2 ScreenOffset => _screenOffset;
-
-        public AimController(CameraController cameraController)
+        /// <param name="frobManager">The player's FrobManager, or null when it was not found.</param>
+        public void UpdateAim(Camera camera, Component frobManager)
         {
-            if (cameraController == null)
+            Transform eye = camera.transform;
+            Vector3 aim = eye.forward;
+
+            // The same ray FrobManager.GetFrobbableUnderCameraCenter casts. A lean moves the
+            // rendered eye off the clean one, so the reticle has to sit on the surface that ray
+            // hits: any fixed depth is right at that depth only. With no hit, the far plane
+            // stands in for the aim direction itself.
+            float depth = camera.farClipPlane;
+            RaycastHit hit;
+            if (frobManager != null
+                && Physics.Raycast(new Ray(eye.position, aim), out hit,
+                    GameTypeResolver.MaxFrobDistance(frobManager), GameTypeResolver.FrobLayerMask(frobManager)))
             {
-                throw new ArgumentNullException(nameof(cameraController), "CameraController cannot be null");
+                depth = hit.distance;
             }
-            _cameraController = cameraController;
-            _screenOffset = Vector2.zero;
-        }
 
-        public void UpdateAim(Camera camera)
-        {
-            // Camera may legitimately be null during Unity scene transitions - this is expected.
-            if (camera == null) return;
-
-            // camera.transform is unmodified (view matrix only), so transform.forward IS the aim direction.
-            Vector3 aimDir = camera.transform.forward;
-            _screenOffset = CanvasCompensation.CalculateAimScreenOffset(camera, aimDir, ProjectionDistance, 1f);
+            ScreenOffset = CanvasCompensation.CalculateAimScreenOffset(camera, aim, depth, 1f);
         }
     }
 }

@@ -137,8 +137,9 @@ These are the default keys. Each action reads a list of keys from `CameraUnlock.
 (`ToggleKey`, `CycleTrackingModeKey`, `YawModeKey`), and any key in the list fires it, so you can
 add, rebind or remove any of them, the chords included.
 
-While head tracking is on, the mod hides the game's crosshair and draws its own in the direction
-the mouse aims. It has no setting or toggle.
+While head tracking moves the view, the mod hides the game's crosshair and draws its own on
+whatever the mouse aims at, and moves the interaction text with it. It shows only where the
+game would show its own crosshair, and has no setting or toggle.
 
 ## Configuration
 

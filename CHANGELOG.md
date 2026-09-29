@@ -32,9 +32,18 @@
 
 ### Removed
 
-- The reticle settings, `ShowReticle` and `ReticleColor`. The reticle is drawn in white whenever head tracking is on during gameplay, as it was by default.
+- The reticle settings, `ShowReticle` and `ReticleColor`. The reticle is drawn in white while head tracking moves the view, wherever the game would show its own.
 - The sensitivity and axis inversion settings: `YawSensitivity`, `PitchSensitivity`, `RollSensitivity`, `PositionSensitivityX`, `PositionSensitivityY`, `PositionSensitivityZ`, `InvertPositionX`, `InvertPositionY` and `InvertTrackerZ`. Set these in your tracker app instead.
 - With these settings at their shipped defaults the camera moves as it did before.
+
+### Fixed
+
+- Turning head tracking off with `End`, entering a cutscene, or the tracker stopping no longer leaves the view stuck where it was while you move on.
+- When the tracker stops sending, the view holds your last head pose instead of freezing, and picks up again when it resumes.
+- The reticle sits on the object you are about to interact with when you lean, instead of drifting off it at close range.
+- The reticle is hidden wherever the game hides its own, including with the game's reticle option turned off. Turning tracking off hands the game back its reticle as the game currently wants it, where before it could stay hidden.
+- The interaction text follows the reticle at every resolution, and keeps following it after the game's HUD is reloaded.
+- Less work each frame while waiting for the game's HUD and drawing the reticle.
 
 ## [1.5.0] - 2026-08-20
 

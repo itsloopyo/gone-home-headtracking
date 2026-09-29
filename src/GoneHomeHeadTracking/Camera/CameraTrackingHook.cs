@@ -1,5 +1,4 @@
 using System;
-using CameraUnlock.Core.Protocol;
 using UnityEngine;
 
 namespace HeadTracking
@@ -15,53 +14,34 @@ namespace HeadTracking
     public sealed class CameraTrackingHook : MonoBehaviour
     {
         private CameraController _cameraController;
-        private AimController _aimController;
-        private GameReticleFinder _gameReticleFinder;
-        private InteractionTextPositioner _interactionTextPositioner;
-        private OpenTrackReceiver _receiver;
+        private readonly AimController _aimController = new AimController();
+        private readonly GameReticle _gameReticle = new GameReticle();
+        private readonly InteractionTextPositioner _interactionText = new InteractionTextPositioner();
         private Camera _camera;
         private bool _isEnabled;
         private bool _preCullErrorLogged;
 
+        // worldToCameraMatrix is a sticky override: once written, Unity stops deriving it from
+        // the transform until ResetWorldToCameraMatrix. Every path that stops tracking has to
+        // reset it, or the view freezes where it was while the player walks on.
+        private bool _matrixOverridden;
+
+        // The frame the view was last tracked, and whether the game wanted its crosshair then.
+        // OnGUI runs after this frame's OnPreCull, so a stamp from an earlier frame means this
+        // camera did not render tracked this frame.
+        private int _trackedFrame = -1;
+        private bool _gameWantsReticle;
+
         // Gameplay detection - only apply tracking when vp_FPSCamera is active
-        private static bool _staticIsInGameplay;
         private Behaviour _cachedFPSCamera;
+        private Component _frobManager;
         private bool _fpsCameraSearched;
-        private bool _isInGameplay;
 
-        /// <summary>
-        /// Returns true if the player currently has control (vp_FPSCamera is enabled).
-        /// Used by ReticleRenderer to hide reticle during cutscenes/menus.
-        /// </summary>
-        public static bool IsInGameplay => _staticIsInGameplay;
-
-        /// <summary>
-        /// Initializes the hook with references to the tracking components.
-        /// </summary>
-        public void Initialize(
-            CameraController cameraController,
-            AimController aimController,
-            GameReticleFinder gameReticleFinder,
-            InteractionTextPositioner interactionTextPositioner,
-            OpenTrackReceiver receiver)
+        public void Initialize(CameraController cameraController, bool enabled)
         {
             _cameraController = cameraController;
-            _aimController = aimController;
-            _gameReticleFinder = gameReticleFinder;
-            _interactionTextPositioner = interactionTextPositioner;
-            _receiver = receiver;
             _camera = GetComponent<Camera>();
-            _isEnabled = true;
-        }
-
-        /// <summary>
-        /// Updates references when aim system is initialized later.
-        /// </summary>
-        public void SetAimComponents(AimController aimController, GameReticleFinder gameReticleFinder, InteractionTextPositioner interactionTextPositioner)
-        {
-            _aimController = aimController;
-            _gameReticleFinder = gameReticleFinder;
-            _interactionTextPositioner = interactionTextPositioner;
+            _isEnabled = enabled;
         }
 
         public void SetEnabled(bool enabled)
@@ -70,102 +50,90 @@ namespace HeadTracking
         }
 
         /// <summary>
-        /// Checks if we're in gameplay by looking for an ENABLED vp_FPSCamera on/near the camera.
-        /// Only applies tracking during actual gameplay, not menus/splash.
-        /// Caches the component reference to avoid expensive GetComponent calls every frame.
+        /// The mod's reticle position as a pixel offset from screen center, while this frame is
+        /// tracked and the game wants a crosshair shown.
         /// </summary>
-        private bool CheckInGameplay()
+        public bool TryGetReticleOffset(out Vector2 offset)
         {
-            // Use cached component if available and still valid
-            // MUST use Unity's == for destroyed object detection (not ReferenceEquals)
-            if (_cachedFPSCamera != null)
-            {
-                // Quick check - just verify it's still enabled
-                return _cachedFPSCamera.enabled && _cachedFPSCamera.gameObject.activeInHierarchy;
-            }
-
-            // Only search once per hook instance
-            if (_fpsCameraSearched) return false;
-
-            // Search for vp_FPSCamera on this camera or its parent
-            // NullHelper OK for Type (not Unity object), but use != null for Unity objects
-            Type fpseCameraType = GameTypeResolver.FPSCameraType;
-            if (NullHelper.NotNull(fpseCameraType) && _camera != null)
-            {
-                // Check on camera itself
-                Component comp = _camera.GetComponent(fpseCameraType);
-                if (comp != null)
-                {
-                    _cachedFPSCamera = comp as Behaviour;
-                    _fpsCameraSearched = true;
-                    return _cachedFPSCamera != null &&
-                           _cachedFPSCamera.enabled &&
-                           _cachedFPSCamera.gameObject.activeInHierarchy;
-                }
-
-                // Check on parent
-                Transform parent = _camera.transform.parent;
-                if (parent != null)
-                {
-                    comp = parent.GetComponent(fpseCameraType);
-                    if (comp != null)
-                    {
-                        _cachedFPSCamera = comp as Behaviour;
-                        _fpsCameraSearched = true;
-                        return _cachedFPSCamera != null &&
-                               _cachedFPSCamera.enabled &&
-                               _cachedFPSCamera.gameObject.activeInHierarchy;
-                    }
-                }
-            }
-
-            _fpsCameraSearched = true;
-            return false;
+            offset = _aimController.ScreenOffset;
+            return _trackedFrame == Time.frameCount && _gameWantsReticle;
         }
 
         /// <summary>
-        /// Called just before this camera renders.
-        ///
-        /// LOOK/AIM DECOUPLING via view matrix:
-        /// Head tracking modifies only worldToCameraMatrix - the camera transform stays unchanged.
-        /// Game logic (FrobManager, raycasts) sees the un-tracked transform = AIM direction.
-        /// Rendering sees the modified view matrix = LOOK direction (where head is pointing).
-        /// No OnPostRender restoration needed.
+        /// Checks if we're in gameplay by looking for an ENABLED vp_FPSCamera on/near the camera.
+        /// Only applies tracking during actual gameplay, not menus/splash.
+        /// </summary>
+        private bool CheckInGameplay()
+        {
+            // MUST use Unity's == for destroyed object detection (not ReferenceEquals)
+            if (_cachedFPSCamera != null)
+            {
+                return _cachedFPSCamera.enabled && _cachedFPSCamera.gameObject.activeInHierarchy;
+            }
+
+            if (_fpsCameraSearched) return false;
+            _fpsCameraSearched = true;
+
+            Type fpsCameraType = GameTypeResolver.FPSCameraType;
+            if (NullHelper.IsNull(fpsCameraType)) return false;
+
+            Component fpsCamera = _camera.GetComponent(fpsCameraType);
+            Transform parent = _camera.transform.parent;
+            if (fpsCamera == null && parent != null)
+            {
+                fpsCamera = parent.GetComponent(fpsCameraType);
+            }
+            if (fpsCamera == null) return false;
+
+            _cachedFPSCamera = (Behaviour)fpsCamera;
+            _frobManager = FindFrobManager(fpsCamera.transform);
+            return _cachedFPSCamera.enabled && _cachedFPSCamera.gameObject.activeInHierarchy;
+        }
+
+        // FrobManager.Awake finds its vp_FPSCamera with GetComponentInChildren, so it sits on
+        // that object or one of its ancestors.
+        private static Component FindFrobManager(Transform fpsCamera)
+        {
+            if (!GameTypeResolver.HasFrobRay) return null;
+
+            Type frobManagerType = GameTypeResolver.FrobManagerType;
+            for (Transform t = fpsCamera; t != null; t = t.parent)
+            {
+                Component frobManager = t.GetComponent(frobManagerType);
+                if (frobManager != null) return frobManager;
+            }
+            ModLoader.Log("[CameraTrackingHook] No FrobManager above vp_FPSCamera; the reticle projects the aim direction");
+            return null;
+        }
+
+        /// <summary>
+        /// Called just before this camera renders, after every LateUpdate, so the game's camera
+        /// code has already placed the transform this frame.
         /// </summary>
         private void OnPreCull()
         {
             try
             {
-                // Check if we're in gameplay
-                _isInGameplay = CheckInGameplay();
-                _staticIsInGameplay = _isInGameplay;
-
-                bool gameStateAllowsTracking = _isInGameplay && _isEnabled;
-                bool canTrack = gameStateAllowsTracking &&
-                                NullHelper.NotNull(_cameraController) && NullHelper.NotNull(_receiver) &&
-                                _receiver.IsReceiving && _camera != null;
-
-                if (!canTrack)
+                if (!_isEnabled || !CheckInGameplay() || !_cameraController.ApplyTracking(_camera))
                 {
+                    StopTracking();
                     return;
                 }
+                _matrixOverridden = true;
 
-                // Apply head tracking via view matrix - transform stays untouched
-                _cameraController.ApplyTracking(_camera);
+                _aimController.UpdateAim(_camera, _frobManager);
 
-                // Update aim controller with tracking info
-                // AimController computes screen offset for where "aim" appears relative to "look"
-                if (NullHelper.NotNull(_aimController))
+                Component hud = GameTypeResolver.CurrentHud();
+                if (hud != null)
                 {
-                    _aimController.UpdateAim(_camera);
-
-                    // Update interaction text position to follow the crosshair
-                    _interactionTextPositioner?.UpdatePosition(_aimController.ScreenOffset);
+                    _gameWantsReticle = _gameReticle.Hide(hud);
+                    _interactionText.Follow(hud, _aimController.ScreenOffset);
                 }
-
-                // Keep trying to hide game reticle until we find it
-                _gameReticleFinder?.TryHideGameReticle();
-
+                else
+                {
+                    _gameWantsReticle = false;
+                }
+                _trackedFrame = Time.frameCount;
             }
             catch (Exception ex)
             {
@@ -179,5 +147,27 @@ namespace HeadTracking
             }
         }
 
+        private void StopTracking()
+        {
+            if (_matrixOverridden)
+            {
+                _matrixOverridden = false;
+                if (_camera != null)
+                {
+                    _camera.ResetWorldToCameraMatrix();
+                }
+            }
+            _gameReticle.Restore();
+            _interactionText.Restore();
+        }
+
+        private void OnDestroy()
+        {
+            // During application quit Unity tears objects down in an arbitrary order, so the HUD
+            // objects may already be half-destroyed and SetActive on them throws. Nothing needs
+            // undoing then.
+            if (HeadTrackingMod.IsQuitting) return;
+            StopTracking();
+        }
     }
 }
