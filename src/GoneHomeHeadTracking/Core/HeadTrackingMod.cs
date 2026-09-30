@@ -21,7 +21,7 @@ namespace HeadTracking
     public sealed class HeadTrackingMod : MonoBehaviour
     {
         public const string ModName = "Head Tracking";
-        public const string ModVersion = "1.5.0";
+        public const string ModVersion = "1.6.0";
 
         /// <summary>Singleton instance</summary>
         public static HeadTrackingMod Instance { get; private set; }
